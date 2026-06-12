@@ -48,6 +48,7 @@
 ### 🤖 AI Engineering
 *   **AI Prompt Template Builder**: Build structural role-play, chain-of-thought, and refactoring prompts.
 *   **JSON Schema Generator**: Design structural output schemas for LLM responses.
+*   **AI Image Prompt Generator**: Generate high-fidelity, detailed image prompts optimized for ComfyUI Nanobanana (Gemini) or Stable Diffusion.
 
 ---
 
