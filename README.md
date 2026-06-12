@@ -7,7 +7,7 @@
 *   **100% Client-Side**: No server backend, no data transmission, completely secure and private.
 *   **Aesthetic UI**: Smooth vanilla CSS, custom font styling, HSL dark/light modes, collapsible sidebar, and layout persistence.
 *   **Search & Favorites**: Instantly filter tools by search keywords or pin your most-used tools to the top dashboard.
-*   **Docker & TrueNAS Ready**: Minimal, multi-stage production image serving via Nginx Alpine (~25MB).
+*   **Docker Ready**: Minimal, multi-stage production image serving via Nginx Alpine (~25MB).
 
 ---
 
@@ -68,9 +68,9 @@
 
 ---
 
-## 🐳 Running with Docker / TrueNAS
+## 🐳 Running with Docker
 
-To run locally or host on TrueNAS:
+To run locally or host in a Docker environment:
 ```bash
 # Build the Docker image
 docker build -t devforge:latest .
@@ -78,4 +78,4 @@ docker build -t devforge:latest .
 # Run container locally on port 8085
 docker run -d -p 8085:80 devforge:latest
 ```
-*To deploy on TrueNAS, point a custom app or docker container configuration to your image registry path (`srikanthkodali9/devforge:latest`).*
+*Official Docker Hub Registry: [srikanthkodali9/devforge](https://hub.docker.com/r/srikanthkodali9/devforge)*
