@@ -1,0 +1,420 @@
+import { useState, useEffect } from 'react';
+import { Copy, Check, Download, Palette, QrCode } from 'lucide-react';
+
+function useCopy() {
+  const [copied, setCopied] = useState(false);
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return { copied, copy };
+}
+
+// Helper color utilities
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : { r: 0, g: 0, b: 0 };
+}
+
+function rgbToHsl(r: number, g: number, b: number) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+}
+
+function hslToHex(h: number, s: number, l: number) {
+  l /= 100;
+  const a = (s * Math.min(l, 1 - l)) / 100;
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+// ----------------------------------------------------
+// 1. QR CODE GENERATOR
+// ----------------------------------------------------
+export function QrGenerator() {
+  const [data, setData] = useState('https://google.com');
+  const [size, setSize] = useState(250);
+  const [fgColor, setFgColor] = useState('#000000');
+  const [bgColor, setBgColor] = useState('#ffffff');
+  const [qrUrl, setQrUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!data.trim()) {
+      setQrUrl('');
+      return;
+    }
+    setLoading(true);
+    // Escape colors
+    const fg = fgColor.replace('#', '');
+    const bg = bgColor.replace('#', '');
+    const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(
+      data
+    )}&color=${fg}&bgcolor=${bg}`;
+    setQrUrl(url);
+  }, [data, size, fgColor, bgColor]);
+
+  const handleDownload = async () => {
+    if (!qrUrl) return;
+    try {
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `qr-code-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error('Download failed', e);
+    }
+  };
+
+  return (
+    <div className="tool-workspace-layout">
+      <div className="glass-panel tool-controls-panel">
+        <div className="tool-inputs-grid tool-inputs-grid-2">
+          <div className="form-group">
+            <label className="form-label">
+              <QrCode size={16} /> QR Data (URL or Text)
+            </label>
+            <input
+              type="text"
+              className="form-input-text"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              placeholder="https://example.com"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">QR Size ({size}px)</label>
+            <input
+              type="range"
+              min="100"
+              max="500"
+              step="50"
+              value={size}
+              onChange={(e) => setSize(Number(e.target.value))}
+              style={{ accentColor: 'var(--accent-primary)', cursor: 'pointer', marginTop: '0.5rem' }}
+            />
+          </div>
+        </div>
+
+        <div className="tool-inputs-grid tool-inputs-grid-2" style={{ marginTop: '0.5rem' }}>
+          <div className="form-group">
+            <label className="form-label">Foreground Color</label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                type="color"
+                value={fgColor}
+                onChange={(e) => setFgColor(e.target.value)}
+                style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
+              />
+              <input
+                type="text"
+                className="form-input-text"
+                value={fgColor}
+                onChange={(e) => setFgColor(e.target.value)}
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Background Color</label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                type="color"
+                value={bgColor}
+                onChange={(e) => setBgColor(e.target.value)}
+                style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
+              />
+              <input
+                type="text"
+                className="form-input-text"
+                value={bgColor}
+                onChange={(e) => setBgColor(e.target.value)}
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-panel output-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+        <span className="output-title" style={{ alignSelf: 'flex-start' }}>Preview</span>
+        
+        {qrUrl ? (
+          <div
+            style={{
+              padding: '1rem',
+              background: 'white',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: 'var(--shadow-md)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            <img
+              src={qrUrl}
+              alt="QR Code"
+              onLoad={() => setLoading(false)}
+              style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
+            />
+            {loading && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'black',
+                  fontWeight: 'bold',
+                }}
+              >
+                Generating...
+              </div>
+            )}
+          </div>
+        ) : (
+          <span style={{ color: 'var(--text-muted)' }}>Enter data to generate QR code</span>
+        )}
+
+        {qrUrl && (
+          <button className="btn btn-primary" onClick={handleDownload} style={{ width: '100%' }}>
+            <Download size={16} /> Download PNG Image
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// 2. COLOR PALETTE GENERATOR & CONVERTER
+// ----------------------------------------------------
+export function ColorConverter() {
+  const [color, setColor] = useState('#8b5cf6'); // Default violet
+  const [rgb, setRgb] = useState({ r: 139, g: 92, b: 246 });
+  const [hsl, setHsl] = useState({ h: 258, s: 90, l: 66 });
+  const { copied, copy } = useCopy();
+
+  useEffect(() => {
+    // Sync conversions
+    const rgbVal = hexToRgb(color);
+    const hslVal = rgbToHsl(rgbVal.r, rgbVal.g, rgbVal.b);
+    setRgb(rgbVal);
+    setHsl(hslVal);
+  }, [color]);
+
+  const handleRgbChange = (key: 'r' | 'g' | 'b', val: number) => {
+    const newRgb = { ...rgb, [key]: val };
+    setRgb(newRgb);
+    const newHex = hslToHex(rgbToHsl(newRgb.r, newRgb.g, newRgb.b).h, rgbToHsl(newRgb.r, newRgb.g, newRgb.b).s, rgbToHsl(newRgb.r, newRgb.g, newRgb.b).l);
+    setColor(newHex);
+  };
+
+  const handleHslChange = (key: 'h' | 's' | 'l', val: number) => {
+    const newHsl = { ...hsl, [key]: val };
+    setHsl(newHsl);
+    const newHex = hslToHex(newHsl.h, newHsl.s, newHsl.l);
+    setColor(newHex);
+  };
+
+  // Generate Shades & Tints
+  const shades = Array.from({ length: 9 }, (_, idx) => {
+    const multiplier = (idx + 1) * 10;
+    return hslToHex(hsl.h, hsl.s, multiplier);
+  });
+
+  // Generate Harmonies
+  const harmonies = [
+    { name: 'Complementary', hex: hslToHex((hsl.h + 180) % 360, hsl.s, hsl.l) },
+    { name: 'Triadic 1', hex: hslToHex((hsl.h + 120) % 360, hsl.s, hsl.l) },
+    { name: 'Triadic 2', hex: hslToHex((hsl.h + 240) % 360, hsl.s, hsl.l) },
+    { name: 'Analogous 1', hex: hslToHex((hsl.h + 30) % 360, hsl.s, hsl.l) },
+    { name: 'Analogous 2', hex: hslToHex((hsl.h + 330) % 360, hsl.s, hsl.l) },
+  ];
+
+  return (
+    <div className="tool-workspace-layout">
+      <div className="glass-panel tool-controls-panel">
+        <div className="tool-inputs-grid tool-inputs-grid-2">
+          <div className="form-group" style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <label className="form-label" style={{ alignSelf: 'flex-start' }}>Color Picker</label>
+            <div style={{ display: 'flex', gap: '1rem', width: '100%' }}>
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                style={{ width: '80px', height: '80px', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', justifySelf: 'center', gap: '0.5rem', flex: 1 }}>
+                <div className="color-swatch" style={{ backgroundColor: color }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <code style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{color.toUpperCase()}</code>
+                  <button className="btn btn-secondary" onClick={() => copy(color)} style={{ padding: '4px 8px' }}>
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-group" style={{ gap: '0.85rem' }}>
+            <label className="form-label">
+              <Palette size={16} /> Color Codes
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', width: '40px', color: 'var(--text-muted)' }}>RGB:</span>
+                <input
+                  type="number"
+                  className="form-input-text"
+                  style={{ padding: '0.4rem 0.6rem' }}
+                  min="0"
+                  max="255"
+                  value={rgb.r}
+                  onChange={(e) => handleRgbChange('r', Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  className="form-input-text"
+                  style={{ padding: '0.4rem 0.6rem' }}
+                  min="0"
+                  max="255"
+                  value={rgb.g}
+                  onChange={(e) => handleRgbChange('g', Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  className="form-input-text"
+                  style={{ padding: '0.4rem 0.6rem' }}
+                  min="0"
+                  max="255"
+                  value={rgb.b}
+                  onChange={(e) => handleRgbChange('b', Number(e.target.value))}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', width: '40px', color: 'var(--text-muted)' }}>HSL:</span>
+                <input
+                  type="number"
+                  className="form-input-text"
+                  style={{ padding: '0.4rem 0.6rem' }}
+                  min="0"
+                  max="360"
+                  value={hsl.h}
+                  onChange={(e) => handleHslChange('h', Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  className="form-input-text"
+                  style={{ padding: '0.4rem 0.6rem' }}
+                  min="0"
+                  max="100"
+                  value={hsl.s}
+                  onChange={(e) => handleHslChange('s', Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  className="form-input-text"
+                  style={{ padding: '0.4rem 0.6rem' }}
+                  min="0"
+                  max="100"
+                  value={hsl.l}
+                  onChange={(e) => handleHslChange('l', Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-panel output-panel">
+        <span className="output-title">Shades & Tints (Click to Copy)</span>
+        <div className="color-shades-grid">
+          {shades.map((s, idx) => (
+            <div key={idx} className="shade-item" onClick={() => copy(s)}>
+              <div className="shade-box" style={{ backgroundColor: s }} />
+              <span className="shade-label">{s.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="glass-panel output-panel">
+        <span className="output-title">Harmonies & Schemes (Click to Copy)</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '1rem', marginTop: '0.5rem' }}>
+          {harmonies.map((h, idx) => (
+            <div
+              key={idx}
+              onClick={() => copy(h.hex)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                background: 'var(--bg-secondary)',
+                padding: '0.75rem',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-color)',
+                alignItems: 'center',
+              }}
+            >
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{h.name}</span>
+              <div style={{ width: '100%', height: '40px', borderRadius: '4px', backgroundColor: h.hex }} />
+              <code style={{ fontSize: '0.8rem' }}>{h.hex.toUpperCase()}</code>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
