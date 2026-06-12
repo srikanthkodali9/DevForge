@@ -17,7 +17,8 @@ import {
   Code,
   Grid,
   Play,
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react';
 
 // Import our custom category tools
@@ -27,7 +28,7 @@ import { JwtDecoder, JsonFormatter, RegexTester, CronGenerator } from './compone
 import { DiffChecker, MarkdownPreview, CaseWordCounter } from './components/tools/TextTools';
 import { QrGenerator, ColorConverter } from './components/tools/DesignTools';
 import { K8sGenerator, K8sEnvConverter, K8sCommandBuilder, K8sResourceConverter, K8sKubeconfigMerger } from './components/tools/K8sTools';
-import { PromptBuilder, JsonSchemaGenerator } from './components/tools/AITools';
+import { PromptBuilder, JsonSchemaGenerator, ImagePromptGenerator } from './components/tools/AITools';
 import { GithubActionsBuilder, ArgoGenerator } from './components/tools/CicdTools';
 import { DockerComposeConverter, DockerfileGenerator, CidrCalculator, SplunkQueryGenerator, PrometheusAlertRules } from './components/tools/DevOpsTools';
 
@@ -232,6 +233,14 @@ export default function App() {
       category: 'ai',
       icon: Cpu,
       component: JsonSchemaGenerator,
+    },
+    {
+      id: 'image-prompt-generator',
+      name: 'AI Image Prompt Generator',
+      description: 'Generate high-fidelity, detailed image prompts optimized for ComfyUI Nanobanana (Gemini) or Stable Diffusion.',
+      category: 'ai',
+      icon: Sparkles,
+      component: ImagePromptGenerator,
     },
     // CI/CD
     {

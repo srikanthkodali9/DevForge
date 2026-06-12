@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Plus, Trash2, Cpu, FileJson } from 'lucide-react';
+import { Copy, Check, Plus, Trash2, Cpu, FileJson, Sparkles } from 'lucide-react';
 
 function useCopy() {
   const [copied, setCopied] = useState(false);
@@ -384,6 +384,411 @@ export function JsonSchemaGenerator() {
         </div>
         <div className="output-display" style={{ minHeight: '300px', fontSize: '0.85rem' }}>
           {schemaOutput}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// 3. AI IMAGE PROMPT GENERATOR (ComfyUI & Stable Diffusion)
+// ----------------------------------------------------
+export function ImagePromptGenerator() {
+  const [subject, setSubject] = useState('a majestic lone wolf standing on top of a snowy mountain peak');
+  const [targetModel, setTargetModel] = useState<'nanobanana' | 'stable-diffusion'>('nanobanana');
+  const [stylePreset, setStylePreset] = useState('photorealistic');
+  const [aspectRatio, setAspectRatio] = useState('16:9');
+  const [lighting, setLighting] = useState('sunset-glow');
+  const [cameraLens, setCameraLens] = useState('dslr-50mm');
+  const [mood, setMood] = useState('dramatic');
+  const [qualityBoosters, setQualityBoosters] = useState<string[]>(['cinematic-composition', 'sharp-focus']);
+  const [customModifiers, setCustomModifiers] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('low quality, worst quality, blurry, bad anatomy, deformed hands, extra limbs, watermark, signature');
+
+  const [positiveOutput, setPositiveOutput] = useState('');
+  const { copied: copiedPos, copy: copyPos } = useCopy();
+  const { copied: copiedNeg, copy: copyNeg } = useCopy();
+
+  const presets = {
+    styles: [
+      { id: 'photorealistic', name: '📷 Photorealistic', desc: 'Real-life photographic details' },
+      { id: 'anime', name: '🎨 Anime / Manga', desc: 'Hand-drawn, vibrant animated feel' },
+      { id: 'digital-art', name: '🖥️ Digital Art', desc: 'Concept illustration, Artstation style' },
+      { id: 'cyberpunk', name: '🌆 Cyberpunk', desc: 'Neon lights and sci-fi technology' },
+      { id: 'fantasy', name: '🧝 Fantasy / Mythic', desc: 'Magical particles and environments' },
+      { id: 'cinematic', name: '🎬 Cinematic Film', desc: 'Movie still, dramatic color grade' },
+      { id: '3d-render', name: '📦 3D Render', desc: 'Octane or Blender style details' },
+    ],
+    lighting: [
+      { id: 'sunset-glow', name: 'Sunset Golden Hour' },
+      { id: 'neon-glow', name: 'Neon Cyberpunk Lighting' },
+      { id: 'volumetric', name: 'Volumetric Sun Rays' },
+      { id: 'studio', name: 'Professional Studio Lights' },
+      { id: 'low-light', name: 'Moody Low Light & Contrast' },
+      { id: 'none', name: 'No Specific Lighting' },
+    ],
+    camera: [
+      { id: 'dslr-50mm', name: 'DSLR 50mm Lens' },
+      { id: 'wide-angle', name: 'Grand Wide Angle' },
+      { id: 'macro', name: 'Macro Close-Up' },
+      { id: 'drone', name: 'Aerial Drone view' },
+      { id: 'POV', name: 'First-Person POV' },
+      { id: 'none', name: 'No Specific Camera' },
+    ]
+  };
+
+  const toggleBooster = (booster: string) => {
+    setQualityBoosters((prev) =>
+      prev.includes(booster) ? prev.filter((b) => b !== booster) : [...prev, booster]
+    );
+  };
+
+  useEffect(() => {
+    const isNanobanana = targetModel === 'nanobanana';
+    
+    // Style description
+    let styleStr = '';
+    if (stylePreset === 'photorealistic') {
+      styleStr = isNanobanana 
+        ? 'A high-fidelity photorealistic photograph, showing natural textures and lifelike details'
+        : 'photorealistic, highly detailed, raw photo, realistic textures';
+    } else if (stylePreset === 'anime') {
+      styleStr = isNanobanana
+        ? 'A beautifully detailed anime illustration with vibrant colors and clean line-art'
+        : 'detailed anime style, vibrant colors, line-art, anime aesthetic';
+    } else if (stylePreset === 'digital-art') {
+      styleStr = isNanobanana
+        ? 'A stunning digital concept art illustration, trending on Artstation'
+        : 'digital concept art, detailed illustration, trending on artstation';
+    } else if (stylePreset === 'cyberpunk') {
+      styleStr = isNanobanana
+        ? 'A futuristic cyberpunk scene with glowing neon lights and high-tech cybernetic details'
+        : 'cyberpunk aesthetic, glowing neon lights, futuristic city elements';
+    } else if (stylePreset === 'fantasy') {
+      styleStr = isNanobanana
+        ? 'An epic fantasy painting, capturing a mystical atmosphere with ethereal glowing particles'
+        : 'fantasy concept art, mystical atmosphere, ethereal glowing particles';
+    } else if (stylePreset === 'cinematic') {
+      styleStr = isNanobanana
+        ? 'A dramatic cinematic film still, featuring high-production value and atmospheric depth'
+        : 'cinematic film still, anamorphic lens, volumetric lighting';
+    } else if (stylePreset === '3d-render') {
+      styleStr = isNanobanana
+        ? 'A detailed 3D render, showcasing clean raytraced highlights and intricate modeling'
+        : '3d render, octane render, raytraced details, blender render';
+    }
+
+    // Lighting description
+    let lightingStr = '';
+    if (lighting === 'sunset-glow') {
+      lightingStr = isNanobanana ? 'bathed in warm golden hour sunset lighting with soft shadows' : 'golden hour, warm sunset lighting, soft shadows';
+    } else if (lighting === 'neon-glow') {
+      lightingStr = isNanobanana ? 'illuminated by glowing neon colored lights' : 'neon lighting, vibrant colored glow, synthwave lights';
+    } else if (lighting === 'volumetric') {
+      lightingStr = isNanobanana ? 'enhanced by strong volumetric light beams breaking through atmospheric haze' : 'volumetric lighting, sun rays, atmospheric haze';
+    } else if (lighting === 'studio') {
+      lightingStr = isNanobanana ? 'lit using a professional studio key and fill lighting setup' : 'studio lighting, soft key light, professional studio portrait';
+    } else if (lighting === 'low-light') {
+      lightingStr = isNanobanana ? 'captured in moody low light with high-contrast shadows' : 'moody low light, dim lighting, high contrast shadows';
+    }
+
+    // Camera description
+    let cameraStr = '';
+    if (cameraLens === 'dslr-50mm') {
+      cameraStr = isNanobanana ? 'using a DSLR camera with a 50mm f/1.8 lens creating a shallow depth of field' : 'captured with DSLR camera, 50mm f/1.8 lens, shallow depth of field';
+    } else if (cameraLens === 'wide-angle') {
+      cameraStr = isNanobanana ? 'taken on a wide-angle lens capturing a grand, expansive perspective' : 'wide angle lens, grand perspective, expansive shot';
+    } else if (cameraLens === 'macro') {
+      cameraStr = isNanobanana ? 'taken with a macro lens showing an extreme close-up with intense detail' : 'macro lens, extreme close-up, high detail focus';
+    } else if (cameraLens === 'drone') {
+      cameraStr = isNanobanana ? 'captured from an aerial drone top-down view' : 'aerial drone photography, top-down perspective, high altitude shot';
+    } else if (cameraLens === 'POV') {
+      cameraStr = isNanobanana ? 'shot in a first-person POV action-cam style' : 'first person POV shot, action camera perspective';
+    }
+
+    // Quality boosters
+    const activeBoosters: string[] = [];
+    if (qualityBoosters.includes('masterpiece')) {
+      activeBoosters.push(isNanobanana ? 'masterpiece quality' : 'masterpiece, award-winning');
+    }
+    if (qualityBoosters.includes('cinematic-composition')) {
+      activeBoosters.push(isNanobanana ? 'cinematically composed framing' : 'cinematic composition, rule of thirds');
+    }
+    if (qualityBoosters.includes('intricate-textures')) {
+      activeBoosters.push(isNanobanana ? 'intricate lifelike textures' : 'intricate details, hyper-detailed textures');
+    }
+    if (qualityBoosters.includes('sharp-focus')) {
+      activeBoosters.push(isNanobanana ? 'rendered in sharp crisp focus' : 'sharp focus, crisp details');
+    }
+
+    // Mood description
+    let moodStr = '';
+    if (mood.trim()) {
+      moodStr = isNanobanana ? `with a ${mood.trim()} mood` : `${mood.trim()} atmosphere`;
+    }
+
+    // Construct final prompt
+    let finalPrompt = '';
+    if (isNanobanana) {
+      // Natural language structure for Nanobanana / Gemini Flash Image node
+      let parts = [];
+      parts.push(`${styleStr} depicting ${subject.trim()}.`);
+      
+      let elements = [];
+      if (lightingStr) elements.push(lightingStr);
+      if (cameraStr) elements.push(cameraStr);
+      if (moodStr) elements.push(moodStr);
+      
+      if (elements.length > 0) {
+        parts.push(`The scene is ${elements.join(', ')}.`);
+      }
+
+      if (activeBoosters.length > 0) {
+        parts.push(`The image features ${activeBoosters.join(' and ')}.`);
+      }
+
+      if (aspectRatio && aspectRatio !== '1:1') {
+        parts.push(`Formatted in a ${aspectRatio} aspect ratio.`);
+      }
+
+      if (customModifiers.trim()) {
+        parts.push(customModifiers.trim());
+      }
+
+      finalPrompt = parts.join(' ');
+    } else {
+      // Tag salad structure for Stable Diffusion
+      let tags = [];
+      tags.push(styleStr);
+      tags.push(subject.trim());
+      if (lightingStr) tags.push(lightingStr);
+      if (cameraStr) tags.push(cameraStr);
+      if (moodStr) tags.push(moodStr);
+      activeBoosters.forEach(b => tags.push(b));
+      if (aspectRatio) tags.push(`aspect ratio ${aspectRatio}`);
+      if (customModifiers.trim()) tags.push(customModifiers.trim());
+      
+      finalPrompt = tags.filter(Boolean).join(', ');
+    }
+
+    setPositiveOutput(finalPrompt);
+  }, [subject, targetModel, stylePreset, aspectRatio, lighting, cameraLens, mood, qualityBoosters, customModifiers]);
+
+  return (
+    <div className="tool-workspace-layout">
+      <div className="glass-panel tool-controls-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {/* Model Target Tab */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <span className="form-label">Target Engine / Model</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+            <button
+              className={`btn ${targetModel === 'nanobanana' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setTargetModel('nanobanana')}
+            >
+              🍌 ComfyUI Nano Banana (Gemini)
+            </button>
+            <button
+              className={`btn ${targetModel === 'stable-diffusion' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setTargetModel('stable-diffusion')}
+            >
+              🌌 Stable Diffusion (SDXL / SD3)
+            </button>
+          </div>
+          <span className="form-label-desc" style={{ marginTop: '0.15rem' }}>
+            {targetModel === 'nanobanana'
+              ? 'Optimizes for natural, grammatically rich descriptions preferred by Google Gemini Flash API.'
+              : 'Optimizes for tag-separated, comma-split descriptors standard for Stable Diffusion models.'}
+          </span>
+        </div>
+
+        {/* Core Subject */}
+        <div className="form-group">
+          <label className="form-label">Core Subject Description</label>
+          <textarea
+            className="form-input-text"
+            rows={3}
+            placeholder="Describe the main subject, actions, or scene elements..."
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            style={{ fontFamily: 'inherit', resize: 'vertical' }}
+          />
+        </div>
+
+        {/* Style Presets Grid */}
+        <div>
+          <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Style Presets</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
+            {presets.styles.map((s) => (
+              <button
+                key={s.id}
+                className={`btn ${stylePreset === s.id ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setStylePreset(s.id)}
+                style={{
+                  fontSize: '0.8rem',
+                  padding: '0.4rem 0.6rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.1rem',
+                  justifyContent: 'center',
+                  textAlign: 'center'
+                }}
+              >
+                <span style={{ fontWeight: 'bold' }}>{s.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Grid selectors */}
+        <div className="tool-inputs-grid tool-inputs-grid-2">
+          <div className="form-group">
+            <label className="form-label">Lighting Style</label>
+            <select
+              className="form-input-text"
+              value={lighting}
+              onChange={(e) => setLighting(e.target.value)}
+              style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              {presets.lighting.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Camera & Lens</label>
+            <select
+              className="form-input-text"
+              value={cameraLens}
+              onChange={(e) => setCameraLens(e.target.value)}
+              style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              {presets.camera.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Aspect Ratio</label>
+            <select
+              className="form-input-text"
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value)}
+              style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              <option value="1:1">1:1 (Square - Avatars)</option>
+              <option value="16:9">16:9 (Landscape - Desktop)</option>
+              <option value="9:16">9:16 (Portrait - Phone)</option>
+              <option value="4:3">4:3 (Classic TV)</option>
+              <option value="21:9">21:9 (Ultrawide Cinematic)</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Mood / Atmosphere</label>
+            <input
+              type="text"
+              className="form-input-text"
+              placeholder="e.g. ethereal, eerie, joyous"
+              value={mood}
+              onChange={(e) => setMood(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Quality Boosters Checkboxes */}
+        <div>
+          <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Quality & Detail Boosters</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+            {[
+              { id: 'masterpiece', label: '🏆 Masterpiece Grade' },
+              { id: 'cinematic-composition', label: '🎬 Cinematic Composition' },
+              { id: 'intricate-textures', label: '🔬 Intricate Textures' },
+              { id: 'sharp-focus', label: '🔍 Sharp Focus' },
+            ].map((b) => (
+              <label
+                key={b.id}
+                className="form-checkbox-label"
+                style={{
+                  padding: '0.5rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: qualityBoosters.includes(b.id) ? 'var(--bg-secondary)' : 'transparent',
+                  cursor: 'pointer'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  className="form-checkbox"
+                  style={{ width: '16px', height: '16px' }}
+                  checked={qualityBoosters.includes(b.id)}
+                  onChange={() => toggleBooster(b.id)}
+                />
+                {b.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Modifiers */}
+        <div className="form-group">
+          <label className="form-label">Custom Modifiers (Suffix)</label>
+          <input
+            type="text"
+            className="form-input-text"
+            placeholder="Add custom trigger tags or specific artist styles..."
+            value={customModifiers}
+            onChange={(e) => setCustomModifiers(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="glass-panel output-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {/* Positive Prompt */}
+        <div>
+          <div className="output-header">
+            <span className="output-title">Generated Positive Prompt</span>
+            <button className="btn btn-primary btn-icon-label" onClick={() => copyPos(positiveOutput)}>
+              {copiedPos ? <Check size={16} /> : <Copy size={16} />}
+              {copiedPos ? 'Copied' : 'Copy Prompt'}
+            </button>
+          </div>
+          <div className="output-display" style={{ minHeight: '130px', fontSize: '0.9rem', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
+            {positiveOutput}
+          </div>
+        </div>
+
+        {/* Stable Diffusion Negative Prompt (Conditional) */}
+        {targetModel === 'stable-diffusion' && (
+          <div>
+            <div className="output-header">
+              <span className="output-title">Negative Prompt (SD only)</span>
+              <button className="btn btn-secondary btn-icon-label" onClick={() => copyNeg(negativePrompt)}>
+                {copiedNeg ? <Check size={16} /> : <Copy size={16} />}
+                {copiedNeg ? 'Copied' : 'Copy Neg'}
+              </button>
+            </div>
+            <textarea
+              className="form-input-text"
+              rows={3}
+              value={negativePrompt}
+              onChange={(e) => setNegativePrompt(e.target.value)}
+              style={{ fontSize: '0.85rem', fontFamily: 'monospace', resize: 'vertical', background: 'var(--bg-primary)' }}
+            />
+          </div>
+        )}
+
+        {/* Info node / tip */}
+        <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>
+            <Sparkles size={16} style={{ marginTop: '0.15rem' }} />
+            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>ComfyUI Nano Banana Tip</h4>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+            <strong>Google Gemini Flash (Nano Banana)</strong> understands language semantically. Instead of using disconnected keyword lists (e.g. <code>photo, high quality, 4k</code>), write in structured natural English paragraphs to guide the model\'s spatial layout, style consistency, and lighting details.
+          </p>
         </div>
       </div>
     </div>
