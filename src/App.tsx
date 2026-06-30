@@ -29,6 +29,7 @@ import { DiffChecker, MarkdownPreview, CaseWordCounter } from './components/tool
 import { QrGenerator, ColorConverter } from './components/tools/DesignTools';
 import { K8sGenerator, K8sEnvConverter, K8sCommandBuilder, K8sResourceConverter, K8sKubeconfigMerger } from './components/tools/K8sTools';
 import { PromptBuilder, JsonSchemaGenerator, ImagePromptGenerator } from './components/tools/AITools';
+import { McpToolBuilder } from './components/tools/McpTools';
 import { GithubActionsBuilder, ArgoGenerator, GitLabCiBuilder, JenkinsfileBuilder } from './components/tools/CicdTools';
 import { DockerComposeConverter, DockerfileGenerator, CidrCalculator, SplunkQueryGenerator, PrometheusAlertRules } from './components/tools/DevOpsTools';
 
@@ -75,6 +76,14 @@ export default function App() {
       category: 'ai',
       icon: Sparkles,
       component: ImagePromptGenerator,
+    },
+    {
+      id: 'mcp-builder',
+      name: 'MCP Server & Config Builder',
+      description: 'Design MCP schemas, generate Python/TypeScript server boilerplates, and build Claude/Cursor configurations.',
+      category: 'ai',
+      icon: Cpu,
+      component: McpToolBuilder,
     },
     // KUBERNETES
     {
