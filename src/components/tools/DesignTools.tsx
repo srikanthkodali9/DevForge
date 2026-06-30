@@ -235,6 +235,103 @@ export function QrGenerator() {
   );
 }
 
+interface PaletteSpace {
+  name: string;
+  colors: string[];
+}
+
+function generateSpacePalettes(h: number, s: number, l: number): PaletteSpace[] {
+  return [
+    {
+      name: 'Never-Ending Gradient',
+      colors: [
+        hslToHex(h, s, Math.max(15, l - 30)),
+        hslToHex((h + 10) % 360, s, Math.max(25, l - 18)),
+        hslToHex((h + 20) % 360, s, Math.max(35, l - 6)),
+        hslToHex((h + 30) % 360, s, Math.min(95, l + 6)),
+        hslToHex((h + 40) % 360, s, Math.min(95, l + 18)),
+        hslToHex((h + 50) % 360, s, Math.min(95, l + 30)),
+      ],
+    },
+    {
+      name: 'Matching Gradient',
+      colors: [
+        hslToHex((h + 180) % 360, Math.max(30, s - 20), Math.max(20, l - 15)),
+        hslToHex((h + 150) % 360, Math.max(30, s - 10), Math.max(30, l - 8)),
+        hslToHex((h + 120) % 360, s, l),
+        hslToHex((h + 80) % 360, s, Math.min(95, l + 8)),
+        hslToHex((h + 40) % 360, s, Math.min(95, l + 15)),
+        hslToHex(h, s, l),
+      ],
+    },
+    {
+      name: 'Triadic Space',
+      colors: [
+        hslToHex(h, s, Math.max(20, l - 15)),
+        hslToHex(h, s, l),
+        hslToHex((h + 120) % 360, s, l),
+        hslToHex((h + 120) % 360, s, Math.min(95, l + 20)),
+        hslToHex((h + 240) % 360, s, l),
+        hslToHex((h + 240) % 360, s, Math.max(20, l - 15)),
+      ],
+    },
+    {
+      name: 'Analogous Space',
+      colors: [
+        hslToHex((h - 40 + 360) % 360, Math.max(20, s - 10), Math.max(20, l - 5)),
+        hslToHex((h - 20 + 360) % 360, s, l),
+        hslToHex(h, s, l),
+        hslToHex((h + 20) % 360, s, l),
+        hslToHex((h + 40) % 360, Math.max(20, s - 10), Math.min(95, l + 5)),
+      ],
+    },
+    {
+      name: 'Dusty Pastel Space',
+      colors: [
+        hslToHex((h - 60 + 360) % 360, 25, 75),
+        hslToHex((h - 30 + 360) % 360, 25, 75),
+        hslToHex(h, 25, 75),
+        hslToHex((h + 30) % 360, 25, 75),
+        hslToHex((h + 60) % 360, 25, 75),
+        hslToHex((h + 90) % 360, 25, 75),
+      ],
+    },
+    {
+      name: 'Elegant Theme Space',
+      colors: [
+        hslToHex(h, 35, 30),
+        hslToHex((h + 30) % 360, 35, 35),
+        hslToHex((h + 60) % 360, 35, 40),
+        hslToHex((h + 150) % 360, 30, 35),
+        hslToHex((h + 210) % 360, 30, 30),
+        hslToHex((h + 240) % 360, 25, 25),
+      ],
+    },
+    {
+      name: 'Monochromatic Space',
+      colors: [
+        hslToHex(h, s, 90),
+        hslToHex(h, s, 75),
+        hslToHex(h, s, 60),
+        hslToHex(h, s, 45),
+        hslToHex(h, s, 30),
+        hslToHex(h, s, 15),
+      ],
+    },
+    {
+      name: 'Highlight & Accent Space',
+      colors: [
+        hslToHex(h, s, l),
+        hslToHex((h + 180) % 360, s, l),
+        hslToHex((h + 90) % 360, Math.min(100, s + 20), Math.min(90, l + 10)),
+        hslToHex((h - 90 + 360) % 360, Math.min(100, s + 20), Math.min(90, l + 10)),
+        hslToHex((h + 150) % 360, s, Math.max(15, l - 20)),
+        hslToHex((h + 210) % 360, s, Math.max(15, l - 20)),
+      ],
+    },
+  ];
+}
+
 // ----------------------------------------------------
 // 2. COLOR PALETTE GENERATOR & CONVERTER
 // ----------------------------------------------------
@@ -253,14 +350,19 @@ export function ColorConverter() {
   }, [color]);
 
   const handleRgbChange = (key: 'r' | 'g' | 'b', val: number) => {
-    const newRgb = { ...rgb, [key]: val };
+    const newRgb = { ...rgb, [key]: Math.min(255, Math.max(0, val)) };
     setRgb(newRgb);
-    const newHex = hslToHex(rgbToHsl(newRgb.r, newRgb.g, newRgb.b).h, rgbToHsl(newRgb.r, newRgb.g, newRgb.b).s, rgbToHsl(newRgb.r, newRgb.g, newRgb.b).l);
+    const newHex = hslToHex(
+      rgbToHsl(newRgb.r, newRgb.g, newRgb.b).h,
+      rgbToHsl(newRgb.r, newRgb.g, newRgb.b).s,
+      rgbToHsl(newRgb.r, newRgb.g, newRgb.b).l
+    );
     setColor(newHex);
   };
 
   const handleHslChange = (key: 'h' | 's' | 'l', val: number) => {
-    const newHsl = { ...hsl, [key]: val };
+    const maxVal = key === 'h' ? 360 : 100;
+    const newHsl = { ...hsl, [key]: Math.min(maxVal, Math.max(0, val)) };
     setHsl(newHsl);
     const newHex = hslToHex(newHsl.h, newHsl.s, newHsl.l);
     setColor(newHex);
@@ -272,14 +374,7 @@ export function ColorConverter() {
     return hslToHex(hsl.h, hsl.s, multiplier);
   });
 
-  // Generate Harmonies
-  const harmonies = [
-    { name: 'Complementary', hex: hslToHex((hsl.h + 180) % 360, hsl.s, hsl.l) },
-    { name: 'Triadic 1', hex: hslToHex((hsl.h + 120) % 360, hsl.s, hsl.l) },
-    { name: 'Triadic 2', hex: hslToHex((hsl.h + 240) % 360, hsl.s, hsl.l) },
-    { name: 'Analogous 1', hex: hslToHex((hsl.h + 30) % 360, hsl.s, hsl.l) },
-    { name: 'Analogous 2', hex: hslToHex((hsl.h + 330) % 360, hsl.s, hsl.l) },
-  ];
+  const palettes = generateSpacePalettes(hsl.h, hsl.s, hsl.l);
 
   return (
     <div className="tool-workspace-layout">
@@ -295,7 +390,7 @@ export function ColorConverter() {
                 style={{ width: '80px', height: '80px', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)' }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', justifySelf: 'center', gap: '0.5rem', flex: 1 }}>
-                <div className="color-swatch" style={{ backgroundColor: color }} />
+                <div className="color-swatch" style={{ backgroundColor: color, height: '40px', borderRadius: '4px' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <code style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{color.toUpperCase()}</code>
                   <button className="btn btn-secondary" onClick={() => copy(color)} style={{ padding: '4px 8px' }}>
@@ -377,40 +472,82 @@ export function ColorConverter() {
         </div>
       </div>
 
-      <div className="glass-panel output-panel">
-        <span className="output-title">Shades & Tints (Click to Copy)</span>
-        <div className="color-shades-grid">
-          {shades.map((s, idx) => (
-            <div key={idx} className="shade-item" onClick={() => copy(s)}>
-              <div className="shade-box" style={{ backgroundColor: s }} />
-              <span className="shade-label">{s.toUpperCase()}</span>
+      <div className="glass-panel output-panel" style={{ gridColumn: 'span 2' }}>
+        <h3 className="k8s-form-section-title" style={{ marginTop: 0, marginBottom: '1.25rem' }}>Color Space Palettes</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          {palettes.map((p, pIdx) => (
+            <div
+              key={pIdx}
+              style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>{p.name}</span>
+                <button
+                  className="btn btn-secondary btn-icon-label"
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', height: '28px' }}
+                  onClick={() => {
+                    copy(p.colors.map(c => c.toUpperCase()).join(', '));
+                  }}
+                >
+                  <Copy size={12} /> Copy Palette
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', width: '100%', height: '50px', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                {p.colors.map((c, cIdx) => (
+                  <div
+                    key={cIdx}
+                    style={{
+                      flex: 1,
+                      backgroundColor: c,
+                      cursor: 'pointer',
+                    }}
+                    title={`Click to copy: ${c.toUpperCase()}`}
+                    onClick={() => copy(c)}
+                    className="palette-swatch-segment"
+                  />
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.25rem' }}>
+                {p.colors.map((c, cIdx) => (
+                  <div
+                    key={cIdx}
+                    onClick={() => copy(c)}
+                    style={{
+                      flex: 1,
+                      textAlign: 'center',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                    }}
+                    title="Click to copy"
+                  >
+                    {c.toUpperCase()}
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="glass-panel output-panel">
-        <span className="output-title">Harmonies & Schemes (Click to Copy)</span>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '1rem', marginTop: '0.5rem' }}>
-          {harmonies.map((h, idx) => (
-            <div
-              key={idx}
-              onClick={() => copy(h.hex)}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-                cursor: 'pointer',
-                background: 'var(--bg-secondary)',
-                padding: '0.75rem',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-color)',
-                alignItems: 'center',
-              }}
-            >
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{h.name}</span>
-              <div style={{ width: '100%', height: '40px', borderRadius: '4px', backgroundColor: h.hex }} />
-              <code style={{ fontSize: '0.8rem' }}>{h.hex.toUpperCase()}</code>
+      <div className="glass-panel output-panel" style={{ gridColumn: 'span 2' }}>
+        <span className="output-title">Monochromatic Shades & Tints (Click to Copy)</span>
+        <div className="color-shades-grid">
+          {shades.map((s, idx) => (
+            <div key={idx} className="shade-item" onClick={() => copy(s)}>
+              <div className="shade-box" style={{ backgroundColor: s }} />
+              <span className="shade-label">{s.toUpperCase()}</span>
             </div>
           ))}
         </div>

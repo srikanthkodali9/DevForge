@@ -905,3 +905,15 @@ a {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Palette swatches */
+.palette-swatch-segment {
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.palette-swatch-segment:hover {
+  transform: scale(1.05);
+  filter: brightness(1.15);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
