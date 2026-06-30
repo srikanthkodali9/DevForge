@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Download, Settings } from 'lucide-react';
+import { Copy, Check, Download, Settings, Info } from 'lucide-react';
 import yaml from 'js-yaml';
 
 // Copy hook
@@ -531,6 +531,652 @@ export function ArgoGenerator() {
         </div>
         <div className="output-display" style={{ minHeight: '300px', fontSize: '0.85rem' }}>
           {yamlOutput}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// 3. GITLAB CI/CD PIPELINE GENERATOR (.gitlab-ci.yml)
+// ----------------------------------------------------
+export function GitLabCiBuilder() {
+  const [baseImage, setBaseImage] = useState('node:20-alpine');
+  const [triggerBranch, setTriggerBranch] = useState('main');
+  const [runLint, setRunLint] = useState(true);
+  const [runTest, setRunTest] = useState(true);
+  const [cacheEnabled, setCacheEnabled] = useState(true);
+  
+  // Docker Push
+  const [dockerBuild, setDockerBuild] = useState(false);
+  const [registry, setRegistry] = useState('registry.gitlab.com');
+  const [imagePath, setImagePath] = useState('my-group/my-project');
+
+  // Deploy Stage
+  const [runDeploy, setRunDeploy] = useState(false);
+  const [deployEnv, setDeployEnv] = useState('production');
+  const [deployScript, setDeployScript] = useState('echo "Deploying application to production server..."');
+
+  const [yamlOutput, setYamlOutput] = useState('');
+  const { copied, copy } = useCopy();
+
+  useEffect(() => {
+    let doc = `# GitLab CI/CD Pipeline Configuration (.gitlab-ci.yml)\n`;
+    
+    // Global image
+    doc += `image: ${baseImage}\n\n`;
+
+    // Cache definition
+    if (cacheEnabled) {
+      doc += `cache:\n`;
+      doc += `  key: \${CI_COMMIT_REF_SLUG}\n`;
+      doc += `  paths:\n`;
+      if (baseImage.startsWith('node')) {
+        doc += `    - .npm/\n`;
+        doc += `    - node_modules/\n`;
+      } else if (baseImage.startsWith('python')) {
+        doc += `    - .cache/pip/\n`;
+      } else if (baseImage.startsWith('golang')) {
+        doc += `    - .go-cache/\n`;
+      } else {
+        doc += `    - vendor/\n`;
+      }
+      doc += `\n`;
+    }
+
+    // Stages list
+    const activeStages = ['build'];
+    if (runLint) activeStages.push('lint');
+    if (runTest) activeStages.push('test');
+    if (dockerBuild) activeStages.push('package');
+    if (runDeploy) activeStages.push('deploy');
+
+    doc += `stages:\n`;
+    activeStages.forEach((s) => {
+      doc += `  - ${s}\n`;
+    });
+    doc += `\n`;
+
+    // Before script
+    if (cacheEnabled && baseImage.startsWith('node')) {
+      doc += `before_script:\n`;
+      doc += `  - npm ci --cache .npm --prefer-offline\n\n`;
+    }
+
+    // Build stage
+    doc += `build-job:\n`;
+    doc += `  stage: build\n`;
+    doc += `  script:\n`;
+    if (baseImage.startsWith('node')) {
+      doc += `    - npm run build\n`;
+      doc += `  artifacts:\n`;
+      doc += `    paths:\n`;
+      doc += `      - dist/\n`;
+      doc += `    expire_in: 1 week\n`;
+    } else if (baseImage.startsWith('python')) {
+      doc += `    - pip install -r requirements.txt\n`;
+    } else if (baseImage.startsWith('golang')) {
+      doc += `    - go build -v -o app\n`;
+      doc += `  artifacts:\n`;
+      doc += `    paths:\n`;
+      doc += `      - app\n`;
+    } else {
+      doc += `    - echo "Compiling application..."\n`;
+    }
+    doc += `  rules:\n`;
+    doc += `    - if: $CI_COMMIT_BRANCH == "${triggerBranch}"\n\n`;
+
+    // Lint stage
+    if (runLint) {
+      doc += `lint-job:\n`;
+      doc += `  stage: lint\n`;
+      doc += `  script:\n`;
+      if (baseImage.startsWith('node')) {
+        doc += `    - npm run lint\n`;
+      } else if (baseImage.startsWith('python')) {
+        doc += `    - pip install flake8 && flake8 .\n`;
+      } else if (baseImage.startsWith('golang')) {
+        doc += `    - go vet ./...\n`;
+      } else {
+        doc += `    - echo "Running linter checks..."\n`;
+      }
+      doc += `  rules:\n`;
+      doc += `    - if: $CI_COMMIT_BRANCH == "${triggerBranch}"\n\n`;
+    }
+
+    // Test stage
+    if (runTest) {
+      doc += `test-job:\n`;
+      doc += `  stage: test\n`;
+      doc += `  script:\n`;
+      if (baseImage.startsWith('node')) {
+        doc += `    - npm test\n`;
+      } else if (baseImage.startsWith('python')) {
+        doc += `    - pip install pytest && pytest\n`;
+      } else if (baseImage.startsWith('golang')) {
+        doc += `    - go test -v ./...\n`;
+      } else {
+        doc += `    - echo "Running unit tests..."\n`;
+      }
+      doc += `  rules:\n`;
+      doc += `    - if: $CI_COMMIT_BRANCH == "${triggerBranch}"\n\n`;
+    }
+
+    // Package stage (Docker build)
+    if (dockerBuild) {
+      doc += `docker-publish:\n`;
+      doc += `  stage: package\n`;
+      doc += `  image: docker:24-git\n`;
+      doc += `  services:\n`;
+      doc += `    - docker:24-dind\n`;
+      doc += `  variables:\n`;
+      doc += `    DOCKER_TLS_CERTDIR: "/certs"\n`;
+      doc += `  before_script: []\n`; // Override global npm ci
+      doc += `  script:\n`;
+      doc += `    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD ${registry}\n`;
+      doc += `    - docker build -t ${registry}/${imagePath}:\${CI_COMMIT_SHA} -t ${registry}/${imagePath}:latest .\n`;
+      doc += `    - docker push ${registry}/${imagePath}:\${CI_COMMIT_SHA}\n`;
+      doc += `    - docker push ${registry}/${imagePath}:latest\n`;
+      doc += `  rules:\n`;
+      doc += `    - if: $CI_COMMIT_BRANCH == "${triggerBranch}"\n\n`;
+    }
+
+    // Deploy stage
+    if (runDeploy) {
+      doc += `deploy-job:\n`;
+      doc += `  stage: deploy\n`;
+      doc += `  environment:\n`;
+      doc += `    name: ${deployEnv}\n`;
+      doc += `    url: https://${deployEnv}.mycompany.com\n`;
+      doc += `  before_script: []\n`; // Override global npm ci
+      doc += `  script:\n`;
+      deployScript.split('\n').forEach((line) => {
+        if (line.trim()) doc += `    - ${line.trim()}\n`;
+      });
+      doc += `  rules:\n`;
+      doc += `    - if: $CI_COMMIT_BRANCH == "${triggerBranch}"\n`;
+    }
+
+    setYamlOutput(doc);
+  }, [baseImage, triggerBranch, runLint, runTest, cacheEnabled, dockerBuild, registry, imagePath, runDeploy, deployEnv, deployScript]);
+
+  const handleDownload = () => {
+    const blob = new Blob([yamlOutput], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '.gitlab-ci.yml';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="tool-workspace-layout">
+      <div className="glass-panel tool-controls-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <h3 className="k8s-form-section-title" style={{ margin: 0, fontSize: '1.1rem' }}>GitLab CI Configuration</h3>
+        
+        <div className="tool-inputs-grid tool-inputs-grid-2">
+          <div className="form-group">
+            <label className="form-label">Base Docker Image</label>
+            <select
+              className="form-input-text"
+              value={baseImage}
+              onChange={(e) => setBaseImage(e.target.value)}
+              style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              <option value="node:20-alpine">Node.js 20 (Alpine)</option>
+              <option value="python:3.11-slim">Python 3.11 (Slim)</option>
+              <option value="golang:1.22-alpine">Go 1.22 (Alpine)</option>
+              <option value="alpine:latest">Alpine Linux (Minimal)</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Target Trigger Branch</label>
+            <input type="text" className="form-input-text" value={triggerBranch} onChange={(e) => setTriggerBranch(e.target.value)} />
+          </div>
+
+          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={cacheEnabled} onChange={(e) => setCacheEnabled(e.target.checked)} />
+              Enable dependency caching (Node modules, pip caches, etc.)
+            </label>
+          </div>
+
+          <div className="form-group">
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={runLint} onChange={(e) => setRunLint(e.target.checked)} />
+              Run Linter checks (lint-job)
+            </label>
+          </div>
+          <div className="form-group">
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={runTest} onChange={(e) => setRunTest(e.target.checked)} />
+              Run Unit Tests (test-job)
+            </label>
+          </div>
+        </div>
+
+        <div className="form-group k8s-form-section" style={{ padding: 0, border: 'none', margin: 0 }}>
+          <span className="k8s-form-section-title">Docker Registry Publishing (GitLab Container Registry)</span>
+        </div>
+
+        <div className="tool-inputs-grid tool-inputs-grid-2" style={{ marginTop: '-0.5rem' }}>
+          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={dockerBuild} onChange={(e) => setDockerBuild(e.target.checked)} />
+              Build & Push Docker Image in Pipeline
+            </label>
+          </div>
+          
+          {dockerBuild && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Registry Host</label>
+                <input type="text" className="form-input-text" value={registry} onChange={(e) => setRegistry(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Image Path / Namespace</label>
+                <input type="text" className="form-input-text" value={imagePath} onChange={(e) => setImagePath(e.target.value)} />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="form-group k8s-form-section" style={{ padding: 0, border: 'none', margin: 0 }}>
+          <span className="k8s-form-section-title">Deployment Stage Settings</span>
+        </div>
+
+        <div className="tool-inputs-grid tool-inputs-grid-2" style={{ marginTop: '-0.5rem' }}>
+          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={runDeploy} onChange={(e) => setRunDeploy(e.target.checked)} />
+              Add Deploy stage to Pipeline
+            </label>
+          </div>
+
+          {runDeploy && (
+            <>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Deployment Environment</label>
+                <input type="text" className="form-input-text" value={deployEnv} onChange={(e) => setDeployEnv(e.target.value)} />
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Deploy Script Commands (one command per line)</label>
+                <textarea
+                  className="form-input-textarea"
+                  value={deployScript}
+                  onChange={(e) => setDeployScript(e.target.value)}
+                  style={{ minHeight: '80px', resize: 'vertical' }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="glass-panel output-panel">
+        <div className="output-header">
+          <span className="output-title">Generated .gitlab-ci.yml</span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary btn-icon-label" onClick={() => copy(yamlOutput)}>
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            <button className="btn btn-primary btn-icon-label" onClick={handleDownload}>
+              <Download size={16} /> Download
+            </button>
+          </div>
+        </div>
+        <div className="output-display" style={{ minHeight: '300px', fontSize: '0.85rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+          {yamlOutput}
+        </div>
+        
+        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>
+            <Info size={16} style={{ marginTop: '0.15rem' }} />
+            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>GitLab CI Tip</h4>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+            Ensure your GitLab Runners are configured with the correct executor (e.g. Docker executor) to run containerized stages.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// 4. JENKINS DECLARATIVE PIPELINE GENERATOR (Jenkinsfile)
+// ----------------------------------------------------
+export function JenkinsfileBuilder() {
+  const [agentType, setAgentType] = useState<'any' | 'docker' | 'none'>('any');
+  const [dockerImage, setDockerImage] = useState('node:20-alpine');
+  const [environmentVars, setEnvironmentVars] = useState('APP_ENV = "production"\nPORT = "8080"');
+  
+  const [runLint, setRunLint] = useState(true);
+  const [runTest, setRunTest] = useState(true);
+  const [lintCommand, setLintCommand] = useState('npm run lint');
+  const [testCommand, setTestCommand] = useState('npm test');
+  const [buildCommand, setBuildCommand] = useState('npm run build');
+
+  const [dockerBuild, setDockerBuild] = useState(false);
+  const [dockerImageName, setDockerImageName] = useState('my-org/my-app');
+  const [dockerCredentialId, setDockerCredentialId] = useState('docker-hub-credentials');
+
+  const [runDeploy, setRunDeploy] = useState(false);
+  const [deployCommand, setDeployCommand] = useState('ssh deploy@prod-server "docker service update --image my-app:latest my-service"');
+
+  const [notifyFailure, setNotifyFailure] = useState(true);
+  const [notifyChannel, setNotifyChannel] = useState('#devops-alerts');
+
+  const [groovyOutput, setGroovyOutput] = useState('');
+  const { copied, copy } = useCopy();
+
+  useEffect(() => {
+    let code = `// Jenkins Declarative Pipeline (Jenkinsfile)\n`;
+    code += `pipeline {\n`;
+    
+    // Agent
+    if (agentType === 'any') {
+      code += `    agent any\n\n`;
+    } else if (agentType === 'docker') {
+      code += `    agent {\n`;
+      code += `        docker {\n`;
+      code += `            image '${dockerImage}'\n`;
+      code += `            args '-v /var/run/docker.sock:/var/run/docker.sock'\n`;
+      code += `        }\n`;
+      code += `    }\n\n`;
+    } else {
+      code += `    agent none\n\n`;
+    }
+
+    // Environment
+    if (environmentVars.trim()) {
+      code += `    environment {\n`;
+      environmentVars.split('\n').forEach((line) => {
+        if (line.trim()) {
+          code += `        ${line.trim()}\n`;
+        }
+      });
+      code += `    }\n\n`;
+    }
+
+    // Stages
+    code += `    stages {\n`;
+
+    // Build stage
+    code += `        stage('Build') {\n`;
+    if (agentType === 'none') {
+      code += `            agent {\n`;
+      code += `                docker {\n`;
+      code += `                    image '${dockerImage}'\n`;
+      code += `                }\n`;
+      code += `            }\n`;
+    }
+    code += `            steps {\n`;
+    code += `                echo 'Building application...'\n`;
+    if (dockerImage.startsWith('node')) {
+      code += `                sh 'npm ci'\n`;
+      code += `                sh '${buildCommand}'\n`;
+    } else if (dockerImage.startsWith('python')) {
+      code += `                sh 'pip install -r requirements.txt'\n`;
+    } else if (dockerImage.startsWith('golang')) {
+      code += `                sh 'go build -v -o app'\n`;
+    } else {
+      code += `                sh 'make build'\n`;
+    }
+    code += `            }\n`;
+    code += `        }\n\n`;
+
+    // Lint stage
+    if (runLint) {
+      code += `        stage('Lint') {\n`;
+      if (agentType === 'none') {
+        code += `            agent {\n`;
+        code += `                docker {\n`;
+        code += `                    image '${dockerImage}'\n`;
+        code += `                }\n`;
+        code += `            }\n`;
+      }
+      code += `            steps {\n`;
+      code += `                echo 'Running lint analysis...'\n`;
+      code += `                sh '${lintCommand}'\n`;
+      code += `            }\n`;
+      code += `        }\n\n`;
+    }
+
+    // Test stage
+    if (runTest) {
+      code += `        stage('Test') {\n`;
+      if (agentType === 'none') {
+        code += `            agent {\n`;
+        code += `                docker {\n`;
+        code += `                    image '${dockerImage}'\n`;
+        code += `                }\n`;
+        code += `            }\n`;
+      }
+      code += `            steps {\n`;
+      code += `                echo 'Running unit testing...'\n`;
+      code += `                sh '${testCommand}'\n`;
+      code += `            }\n`;
+      code += `        }\n\n`;
+    }
+
+    // Docker build/push stage
+    if (dockerBuild) {
+      code += `        stage('Docker Publish') {\n`;
+      code += `            steps {\n`;
+      code += `                script {\n`;
+      code += `                    docker.withRegistry('', '${dockerCredentialId}') {\n`;
+      code += `                        def customImage = docker.build("${dockerImageName}:\${env.BUILD_ID}")\n`;
+      code += `                        customImage.push()\n`;
+      code += `                        customImage.push('latest')\n`;
+      code += `                    }\n`;
+      code += `                }\n`;
+      code += `            }\n`;
+      code += `        }\n\n`;
+    }
+
+    // Deploy stage
+    if (runDeploy) {
+      code += `        stage('Deploy') {\n`;
+      code += `            steps {\n`;
+      code += `                echo 'Executing deployment scripts...'\n`;
+      code += `                sh '${deployCommand}'\n`;
+      code += `            }\n`;
+      code += `        }\n\n`;
+    }
+
+    code += `    }\n\n`; // End stages
+
+    // Post actions
+    code += `    post {\n`;
+    code += `        always {\n`;
+    code += `            cleanWs()\n`;
+    code += `        }\n`;
+    if (notifyFailure) {
+      code += `        failure {\n`;
+      code += `            slackSend channel: '${notifyChannel}',\n`;
+      code += `                      color: '#F44336',\n`;
+      code += `                      message: "FAILED: Job '\${env.JOB_NAME}' (\${env.BUILD_NUMBER}) (\${env.BUILD_URL})"\n`;
+      code += `        }\n`;
+    }
+    code += `    }\n`; // End post
+
+    code += `}\n`; // End pipeline
+
+    setGroovyOutput(code);
+  }, [agentType, dockerImage, environmentVars, runLint, runTest, lintCommand, testCommand, buildCommand, dockerBuild, dockerImageName, dockerCredentialId, runDeploy, deployCommand, notifyFailure, notifyChannel]);
+
+  const handleDownload = () => {
+    const blob = new Blob([groovyOutput], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Jenkinsfile';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="tool-workspace-layout">
+      <div className="glass-panel tool-controls-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <h3 className="k8s-form-section-title" style={{ margin: 0, fontSize: '1.1rem' }}>Jenkins Pipeline Configuration</h3>
+        
+        <div className="tool-inputs-grid tool-inputs-grid-2">
+          <div className="form-group">
+            <label className="form-label">Jenkins Agent Executor</label>
+            <select
+              className="form-input-text"
+              value={agentType}
+              onChange={(e) => setAgentType(e.target.value as any)}
+              style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              <option value="any">agent any (Any available agent)</option>
+              <option value="docker">agent docker (Run stages in container)</option>
+              <option value="none">agent none (Specify agent per stage)</option>
+            </select>
+          </div>
+
+          {agentType === 'docker' && (
+            <div className="form-group">
+              <label className="form-label">Docker Build Agent Image</label>
+              <input type="text" className="form-input-text" value={dockerImage} onChange={(e) => setDockerImage(e.target.value)} />
+            </div>
+          )}
+
+          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+            <label className="form-label">Environment Variables (one key=val pair per line)</label>
+            <textarea
+              className="form-input-textarea"
+              value={environmentVars}
+              onChange={(e) => setEnvironmentVars(e.target.value)}
+              style={{ minHeight: '70px', resize: 'vertical' }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Build Command</label>
+            <input type="text" className="form-input-text" value={buildCommand} onChange={(e) => setBuildCommand(e.target.value)} />
+          </div>
+
+          <div className="form-group" style={{ display: 'flex', alignItems: 'center' }}></div>
+
+          <div className="form-group">
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={runLint} onChange={(e) => setRunLint(e.target.checked)} />
+              Add Lint stage
+            </label>
+          </div>
+
+          {runLint && (
+            <div className="form-group">
+              <label className="form-label">Lint Command</label>
+              <input type="text" className="form-input-text" value={lintCommand} onChange={(e) => setLintCommand(e.target.value)} />
+            </div>
+          )}
+
+          <div className="form-group">
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={runTest} onChange={(e) => setRunTest(e.target.checked)} />
+              Add Test stage
+            </label>
+          </div>
+
+          {runTest && (
+            <div className="form-group">
+              <label className="form-label">Test Command</label>
+              <input type="text" className="form-input-text" value={testCommand} onChange={(e) => setTestCommand(e.target.value)} />
+            </div>
+          )}
+        </div>
+
+        <div className="form-group k8s-form-section" style={{ padding: 0, border: 'none', margin: 0 }}>
+          <span className="k8s-form-section-title">Docker Build / Publish Stage</span>
+        </div>
+
+        <div className="tool-inputs-grid tool-inputs-grid-2" style={{ marginTop: '-0.5rem' }}>
+          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={dockerBuild} onChange={(e) => setDockerBuild(e.target.checked)} />
+              Build & Push custom Docker image to registry
+            </label>
+          </div>
+
+          {dockerBuild && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Registry Image Name</label>
+                <input type="text" className="form-input-text" value={dockerImageName} onChange={(e) => setDockerImageName(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Docker Credentials ID</label>
+                <input type="text" className="form-input-text" value={dockerCredentialId} onChange={(e) => setDockerCredentialId(e.target.value)} />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="form-group k8s-form-section" style={{ padding: 0, border: 'none', margin: 0 }}>
+          <span className="k8s-form-section-title">Deployment & Alerts</span>
+        </div>
+
+        <div className="tool-inputs-grid tool-inputs-grid-2" style={{ marginTop: '-0.5rem' }}>
+          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={runDeploy} onChange={(e) => setRunDeploy(e.target.checked)} />
+              Add Deploy stage
+            </label>
+          </div>
+
+          {runDeploy && (
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Deployment script command</label>
+              <input type="text" className="form-input-text" value={deployCommand} onChange={(e) => setDeployCommand(e.target.value)} />
+            </div>
+          )}
+
+          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+            <label className="form-checkbox-label">
+              <input type="checkbox" className="form-checkbox" checked={notifyFailure} onChange={(e) => setNotifyFailure(e.target.checked)} />
+              Send Slack notification on pipeline failure
+            </label>
+          </div>
+
+          {notifyFailure && (
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Slack Notification Channel</label>
+              <input type="text" className="form-input-text" value={notifyChannel} onChange={(e) => setNotifyChannel(e.target.value)} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="glass-panel output-panel">
+        <div className="output-header">
+          <span className="output-title">Generated Jenkinsfile</span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary btn-icon-label" onClick={() => copy(groovyOutput)}>
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            <button className="btn btn-primary btn-icon-label" onClick={handleDownload}>
+              <Download size={16} /> Download
+            </button>
+          </div>
+        </div>
+        <div className="output-display" style={{ minHeight: '300px', fontSize: '0.85rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+          {groovyOutput}
+        </div>
+        
+        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>
+            <Info size={16} style={{ marginTop: '0.15rem' }} />
+            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>Jenkins Pipeline Tip</h4>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+            Place the generated <code>Jenkinsfile</code> at the root of your project directory and configure a "Pipeline from SCM" in Jenkins.
+          </p>
         </div>
       </div>
     </div>

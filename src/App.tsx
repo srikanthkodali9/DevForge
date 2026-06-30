@@ -29,7 +29,7 @@ import { DiffChecker, MarkdownPreview, CaseWordCounter } from './components/tool
 import { QrGenerator, ColorConverter } from './components/tools/DesignTools';
 import { K8sGenerator, K8sEnvConverter, K8sCommandBuilder, K8sResourceConverter, K8sKubeconfigMerger } from './components/tools/K8sTools';
 import { PromptBuilder, JsonSchemaGenerator, ImagePromptGenerator } from './components/tools/AITools';
-import { GithubActionsBuilder, ArgoGenerator } from './components/tools/CicdTools';
+import { GithubActionsBuilder, ArgoGenerator, GitLabCiBuilder, JenkinsfileBuilder } from './components/tools/CicdTools';
 import { DockerComposeConverter, DockerfileGenerator, CidrCalculator, SplunkQueryGenerator, PrometheusAlertRules } from './components/tools/DevOpsTools';
 
 interface ToolItem {
@@ -51,130 +51,30 @@ export default function App() {
 
   // Define tools list
   const tools: ToolItem[] = [
-    // CRYPTO
+    // AI ENGINEERING
     {
-      id: 'hash-generator',
-      name: 'Hash Generator',
-      description: 'Generate SHA-256, SHA-1, SHA-512, and MD5 cryptographic hashes.',
-      category: 'crypto',
-      icon: Key,
-      component: HashGenerator,
+      id: 'prompt-builder',
+      name: 'AI Prompt Builder',
+      description: 'Structured template prompt engineer for system roles, few-shot, and refactoring.',
+      category: 'ai',
+      icon: Cpu,
+      component: PromptBuilder,
     },
     {
-      id: 'uuid-generator',
-      name: 'UUID/ULID Generator',
-      description: 'Bulk generate cryptographically secure UUID v4 or ULID strings.',
-      category: 'crypto',
-      icon: Key,
-      component: UuidGenerator,
+      id: 'json-schema-generator',
+      name: 'Structured JSON Schema',
+      description: 'Configure and output schemas for OpenAI/Gemini structured responses.',
+      category: 'ai',
+      icon: Cpu,
+      component: JsonSchemaGenerator,
     },
     {
-      id: 'password-generator',
-      name: 'Password Generator',
-      description: 'Generate strong, customizable passwords with a visual strength meter.',
-      category: 'crypto',
-      icon: Key,
-      component: PasswordGenerator,
-    },
-    // CONVERTERS
-    {
-      id: 'base64-codec',
-      name: 'Base64 Encoder/Decoder',
-      description: 'Encode or decode plain text strings into Base64 format.',
-      category: 'converters',
-      icon: RefreshCw,
-      component: Base64Codec,
-    },
-    {
-      id: 'url-codec',
-      name: 'URL Encoder/Decoder',
-      description: 'Encode or decode query strings and special URI components.',
-      category: 'converters',
-      icon: RefreshCw,
-      component: UrlCodec,
-    },
-    {
-      id: 'json-yaml-converter',
-      name: 'JSON <-> YAML Converter',
-      description: 'Convert JSON objects to YAML format and vice-versa instantly.',
-      category: 'converters',
-      icon: RefreshCw,
-      component: JsonYamlConverter,
-    },
-    // WEB DEV
-    {
-      id: 'jwt-decoder',
-      name: 'JWT Decoder',
-      description: 'Decode and validate JSON Web Token headers, payloads, and signatures.',
-      category: 'webdev',
-      icon: Terminal,
-      component: JwtDecoder,
-    },
-    {
-      id: 'json-formatter',
-      name: 'JSON Formatter & Validator',
-      description: 'Validate, minifying, or prettify JSON with customizable indentation.',
-      category: 'webdev',
-      icon: Terminal,
-      component: JsonFormatter,
-    },
-    {
-      id: 'regex-tester',
-      name: 'Regex Tester',
-      description: 'Test regular expressions in real-time with capture groups and match details.',
-      category: 'webdev',
-      icon: Terminal,
-      component: RegexTester,
-    },
-    {
-      id: 'cron-generator',
-      name: 'Crontab Generator',
-      description: 'Interactive visual cron scheduler with clear English explanation.',
-      category: 'webdev',
-      icon: Terminal,
-      component: CronGenerator,
-    },
-    // TEXT
-    {
-      id: 'diff-checker',
-      name: 'Diff Checker',
-      description: 'Check side-by-side or line diffs of two text structures.',
-      category: 'text',
-      icon: Type,
-      component: DiffChecker,
-    },
-    {
-      id: 'markdown-preview',
-      name: 'Markdown Previewer',
-      description: 'Interactive side-by-side markdown editor and live rendering preview.',
-      category: 'text',
-      icon: Type,
-      component: MarkdownPreview,
-    },
-    {
-      id: 'case-counter',
-      name: 'Case Converter & Counter',
-      description: 'Analyze word count, reading time, and convert casing (camelCase, snake_case).',
-      category: 'text',
-      icon: Type,
-      component: CaseWordCounter,
-    },
-    // DESIGN
-    {
-      id: 'qr-generator',
-      name: 'QR Code Generator',
-      description: 'Create customizable QR codes with custom colors and download them as PNG.',
-      category: 'design',
-      icon: Palette,
-      component: QrGenerator,
-    },
-    {
-      id: 'color-converter',
-      name: 'Color Converter & Harmony',
-      description: 'Convert HEX, RGB, HSL values and build matching harmonic color palettes.',
-      category: 'design',
-      icon: Palette,
-      component: ColorConverter,
+      id: 'image-prompt-generator',
+      name: 'AI Image Prompt Generator',
+      description: 'Generate high-fidelity, detailed image prompts optimized for ComfyUI Nanobanana (Gemini) or Stable Diffusion.',
+      category: 'ai',
+      icon: Sparkles,
+      component: ImagePromptGenerator,
     },
     // KUBERNETES
     {
@@ -217,32 +117,7 @@ export default function App() {
       icon: Layers,
       component: K8sKubeconfigMerger,
     },
-    // AI
-    {
-      id: 'prompt-builder',
-      name: 'AI Prompt Builder',
-      description: 'Structured template prompt engineer for system roles, few-shot, and refactoring.',
-      category: 'ai',
-      icon: Cpu,
-      component: PromptBuilder,
-    },
-    {
-      id: 'json-schema-generator',
-      name: 'Structured JSON Schema',
-      description: 'Configure and output schemas for OpenAI/Gemini structured responses.',
-      category: 'ai',
-      icon: Cpu,
-      component: JsonSchemaGenerator,
-    },
-    {
-      id: 'image-prompt-generator',
-      name: 'AI Image Prompt Generator',
-      description: 'Generate high-fidelity, detailed image prompts optimized for ComfyUI Nanobanana (Gemini) or Stable Diffusion.',
-      category: 'ai',
-      icon: Sparkles,
-      component: ImagePromptGenerator,
-    },
-    // CI/CD
+    // CI/CD PIPELINES
     {
       id: 'github-actions-builder',
       name: 'GitHub Actions Builder',
@@ -250,6 +125,22 @@ export default function App() {
       category: 'cicd',
       icon: Play,
       component: GithubActionsBuilder,
+    },
+    {
+      id: 'gitlab-ci-builder',
+      name: 'GitLab CI/CD Builder',
+      description: 'Generate .gitlab-ci.yml configurations for testing, security scanning, and container registry publishing.',
+      category: 'cicd',
+      icon: Play,
+      component: GitLabCiBuilder,
+    },
+    {
+      id: 'jenkinsfile-builder',
+      name: 'Jenkinsfile Builder',
+      description: 'Generate Groovy-based declarative Jenkinsfiles for multi-stage CI/CD pipelines.',
+      category: 'cicd',
+      icon: Play,
+      component: JenkinsfileBuilder,
     },
     {
       id: 'argo-generator',
@@ -299,6 +190,131 @@ export default function App() {
       category: 'devops',
       icon: Settings,
       component: PrometheusAlertRules,
+    },
+    // WEB & DEVELOPMENT
+    {
+      id: 'jwt-decoder',
+      name: 'JWT Decoder',
+      description: 'Decode and validate JSON Web Token headers, payloads, and signatures.',
+      category: 'webdev',
+      icon: Terminal,
+      component: JwtDecoder,
+    },
+    {
+      id: 'json-formatter',
+      name: 'JSON Formatter & Validator',
+      description: 'Validate, minifying, or prettify JSON with customizable indentation.',
+      category: 'webdev',
+      icon: Terminal,
+      component: JsonFormatter,
+    },
+    {
+      id: 'regex-tester',
+      name: 'Regex Tester',
+      description: 'Test regular expressions in real-time with capture groups and match details.',
+      category: 'webdev',
+      icon: Terminal,
+      component: RegexTester,
+    },
+    {
+      id: 'cron-generator',
+      name: 'Crontab Generator',
+      description: 'Interactive visual cron scheduler with clear English explanation.',
+      category: 'webdev',
+      icon: Terminal,
+      component: CronGenerator,
+    },
+    // CONVERTERS
+    {
+      id: 'base64-codec',
+      name: 'Base64 Encoder/Decoder',
+      description: 'Encode or decode plain text strings into Base64 format.',
+      category: 'converters',
+      icon: RefreshCw,
+      component: Base64Codec,
+    },
+    {
+      id: 'url-codec',
+      name: 'URL Encoder/Decoder',
+      description: 'Encode or decode query strings and special URI components.',
+      category: 'converters',
+      icon: RefreshCw,
+      component: UrlCodec,
+    },
+    {
+      id: 'json-yaml-converter',
+      name: 'JSON <-> YAML Converter',
+      description: 'Convert JSON objects to YAML format and vice-versa instantly.',
+      category: 'converters',
+      icon: RefreshCw,
+      component: JsonYamlConverter,
+    },
+    // CRYPTO & HASHES
+    {
+      id: 'hash-generator',
+      name: 'Hash Generator',
+      description: 'Generate SHA-256, SHA-1, SHA-512, and MD5 cryptographic hashes.',
+      category: 'crypto',
+      icon: Key,
+      component: HashGenerator,
+    },
+    {
+      id: 'uuid-generator',
+      name: 'UUID/ULID Generator',
+      description: 'Bulk generate cryptographically secure UUID v4 or ULID strings.',
+      category: 'crypto',
+      icon: Key,
+      component: UuidGenerator,
+    },
+    {
+      id: 'password-generator',
+      name: 'Password Generator',
+      description: 'Generate strong, customizable passwords with a visual strength meter.',
+      category: 'crypto',
+      icon: Key,
+      component: PasswordGenerator,
+    },
+    // TEXT UTILITIES
+    {
+      id: 'diff-checker',
+      name: 'Diff Checker',
+      description: 'Check side-by-side or line diffs of two text structures.',
+      category: 'text',
+      icon: Type,
+      component: DiffChecker,
+    },
+    {
+      id: 'markdown-preview',
+      name: 'Markdown Previewer',
+      description: 'Interactive side-by-side markdown editor and live rendering preview.',
+      category: 'text',
+      icon: Type,
+      component: MarkdownPreview,
+    },
+    {
+      id: 'case-counter',
+      name: 'Case Converter & Counter',
+      description: 'Analyze word count, reading time, and convert casing (camelCase, snake_case).',
+      category: 'text',
+      icon: Type,
+      component: CaseWordCounter,
+    },
+    // DESIGN TOOLS
+    {
+      id: 'qr-generator',
+      name: 'QR Code Generator',
+      description: 'Create customizable QR codes with custom colors and download them as PNG.',
+      category: 'design',
+      icon: Palette,
+      component: QrGenerator,
+    },
+    {
+      id: 'color-converter',
+      name: 'Color Converter & Harmony',
+      description: 'Convert HEX, RGB, HSL values and build matching harmonic color palettes.',
+      category: 'design',
+      icon: Palette,
+      component: ColorConverter,
     },
   ];
 
@@ -354,15 +370,15 @@ export default function App() {
   );
 
   const categories = [
-    { id: 'crypto', name: 'Crypto & Hashes', icon: Key },
-    { id: 'converters', name: 'Converters', icon: RefreshCw },
-    { id: 'webdev', name: 'Web & Development', icon: Terminal },
-    { id: 'text', name: 'Text Utilities', icon: Type },
-    { id: 'design', name: 'Design Tools', icon: Palette },
+    { id: 'ai', name: 'AI Engineering', icon: Cpu },
     { id: 'k8s', name: 'Kubernetes', icon: Layers },
     { id: 'cicd', name: 'CI/CD Pipelines', icon: Play },
     { id: 'devops', name: 'DevOps & Containers', icon: Settings },
-    { id: 'ai', name: 'AI Engineering', icon: Cpu },
+    { id: 'webdev', name: 'Web & Development', icon: Terminal },
+    { id: 'converters', name: 'Converters', icon: RefreshCw },
+    { id: 'crypto', name: 'Crypto & Hashes', icon: Key },
+    { id: 'text', name: 'Text Utilities', icon: Type },
+    { id: 'design', name: 'Design Tools', icon: Palette },
   ];
 
   const currentTool = tools.find((t) => t.id === activeToolId);
