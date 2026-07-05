@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Download, Palette, QrCode } from 'lucide-react';
+import { Copy, Check, Download, Palette, QrCode, Plus, Trash } from 'lucide-react';
 
 function useCopy() {
   const [copied, setCopied] = useState(false);
@@ -341,6 +341,29 @@ export function ColorConverter() {
   const [hsl, setHsl] = useState({ h: 258, s: 90, l: 66 });
   const { copied, copy } = useCopy();
 
+  // Color Dock States
+  const [dockedColors, setDockedColors] = useState<string[]>(['#8b5cf6', '#3b82f6', '#10b981']); // Starts with 3 defaults
+  const [gradientAngle, setGradientAngle] = useState<number>(135);
+
+  const addCurrentColorToDock = () => {
+    if (dockedColors.length >= 6) return;
+    if (dockedColors.map(c => c.toLowerCase()).includes(color.toLowerCase())) return;
+    setDockedColors([...dockedColors, color.toLowerCase()]);
+  };
+
+  const removeColorFromDock = (index: number) => {
+    setDockedColors(dockedColors.filter((_, i) => i !== index));
+  };
+
+  const moveColorInDock = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= dockedColors.length) return;
+    const updated = [...dockedColors];
+    const temp = updated[fromIndex];
+    updated[fromIndex] = updated[toIndex];
+    updated[toIndex] = temp;
+    setDockedColors(updated);
+  };
+
   useEffect(() => {
     // Sync conversions
     const rgbVal = hexToRgb(color);
@@ -470,6 +493,165 @@ export function ColorConverter() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* COLOR DOCK & GRADIENT BUILDER */}
+      <div className="glass-panel output-panel" style={{ gridColumn: 'span 2' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h3 className="k8s-form-section-title" style={{ margin: 0 }}>Color Dock & Custom Gradient Builder</h3>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              className="btn btn-secondary btn-icon-label"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', height: '32px' }}
+              onClick={addCurrentColorToDock}
+              disabled={dockedColors.length >= 6}
+            >
+              <Plus size={14} /> Add Active Color ({dockedColors.length}/6)
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', color: 'var(--text-muted)', height: '32px' }}
+              onClick={() => setDockedColors([])}
+            >
+              Clear Dock
+            </button>
+          </div>
+        </div>
+
+        {/* 6 Colors Slots */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          {Array.from({ length: 6 }).map((_, idx) => {
+            const c = dockedColors[idx];
+            return (
+              <div
+                key={idx}
+                style={{
+                  background: 'var(--bg-secondary)',
+                  border: c ? `1px solid var(--border-color)` : `1px dashed var(--border-color)`,
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  position: 'relative',
+                  minHeight: '115px',
+                  justifyContent: 'center',
+                }}
+              >
+                {c ? (
+                  <>
+                    <div style={{ width: '100%', height: '32px', borderRadius: '4px', backgroundColor: c }} />
+                    <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{c.toUpperCase()}</span>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ padding: '2px 4px', fontSize: '0.7rem', height: '20px' }}
+                        onClick={() => copy(c)}
+                        title="Copy Hex"
+                      >
+                        <Copy size={10} />
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ padding: '2px 4px', fontSize: '0.7rem', height: '20px', color: 'var(--text-muted)' }}
+                        onClick={() => removeColorFromDock(idx)}
+                        title="Remove"
+                      >
+                        <Trash size={10} />
+                      </button>
+                    </div>
+                    {/* Reordering indicators */}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '0.1rem' }}>
+                      {idx > 0 && (
+                        <button
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.7rem', padding: 0 }}
+                          onClick={() => moveColorInDock(idx, idx - 1)}
+                          title="Move Left"
+                        >
+                          ◀
+                        </button>
+                      )}
+                      {idx < dockedColors.length - 1 && (
+                        <button
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.7rem', padding: 0 }}
+                          onClick={() => moveColorInDock(idx, idx + 1)}
+                          title="Move Right"
+                        >
+                          ▶
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Empty</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Gradient Generator View */}
+        {dockedColors.length >= 2 ? (
+          <div
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Generated Gradient CSS</span>
+                <select
+                  className="form-input-text"
+                  style={{ width: '100px', padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: '28px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                  value={gradientAngle}
+                  onChange={(e) => setGradientAngle(Number(e.target.value))}
+                >
+                  <option value="0">0° (Up)</option>
+                  <option value="45">45° (Diag)</option>
+                  <option value="90">90° (Right)</option>
+                  <option value="135">135° (Default)</option>
+                  <option value="180">180° (Down)</option>
+                  <option value="270">270° (Left)</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  className="btn btn-secondary btn-icon-label"
+                  style={{ height: '28px', fontSize: '0.75rem' }}
+                  onClick={() => copy(`background: linear-gradient(${gradientAngle}deg, ${dockedColors.join(', ')});`)}
+                >
+                  <Copy size={12} /> Copy CSS
+                </button>
+              </div>
+            </div>
+
+            {/* Gradient Visual Preview */}
+            <div
+              style={{
+                width: '100%',
+                height: '80px',
+                borderRadius: 'var(--radius-sm)',
+                background: `linear-gradient(${gradientAngle}deg, ${dockedColors.join(', ')})`,
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
+              }}
+            />
+
+            <code style={{ fontSize: '0.8rem', padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: '4px', border: '1px solid var(--border-color)', display: 'block', wordBreak: 'break-all', fontFamily: 'var(--font-mono)' }}>
+              {`background: linear-gradient(${gradientAngle}deg, ${dockedColors.join(', ')});`}
+            </code>
+          </div>
+        ) : (
+          <div style={{ padding: '1.5rem', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            Add at least 2 colors to the dock to build and preview a custom CSS gradient.
+          </div>
+        )}
       </div>
 
       <div className="glass-panel output-panel" style={{ gridColumn: 'span 2' }}>
