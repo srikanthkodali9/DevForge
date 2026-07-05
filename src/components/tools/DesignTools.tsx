@@ -74,6 +74,7 @@ export function QrGenerator() {
   const [size, setSize] = useState(250);
   const [fgColor, setFgColor] = useState('#000000');
   const [bgColor, setBgColor] = useState('#ffffff');
+  const [frameStyle, setFrameStyle] = useState<'none' | 'retro' | 'heart' | 'phone' | 'speech'>('none');
   const [qrUrl, setQrUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -83,7 +84,6 @@ export function QrGenerator() {
       return;
     }
     setLoading(true);
-    // Escape colors
     const fg = fgColor.replace('#', '');
     const bg = bgColor.replace('#', '');
     const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(
@@ -95,38 +95,309 @@ export function QrGenerator() {
   const handleDownload = async () => {
     if (!qrUrl) return;
     try {
-      const response = await fetch(qrUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `qr-code-${Date.now()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      if (frameStyle === 'none') {
+        const response = await fetch(qrUrl);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `qr-code-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+        return;
+      }
+
+      // Draw custom canvas for the frames
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const qrImg = new Image();
+      qrImg.crossOrigin = 'anonymous'; // prevent CORS canvas taint
+      qrImg.src = qrUrl;
+      qrImg.onload = () => {
+        let canvasW = size;
+        let canvasH = size;
+        let qrX = 0;
+        let qrY = 0;
+
+        if (frameStyle === 'retro') {
+          canvasW = size + 40;
+          canvasH = size + 70;
+          qrX = 20;
+          qrY = 50;
+
+          // Fill Canvas Background
+          ctx.fillStyle = '#1a202c';
+          ctx.fillRect(0, 0, canvasW, canvasH);
+
+          // Draw Titlebar
+          ctx.fillStyle = '#4a5568';
+          ctx.fillRect(0, 0, canvasW, 36);
+
+          // Close button circles
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(20, 18, 5, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.fillStyle = '#eab308';
+          ctx.beginPath();
+          ctx.arc(36, 18, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.arc(52, 18, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Title text
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 12px Courier New, monospace';
+          ctx.fillText('system_qr.exe', 70, 22);
+
+          // Border
+          ctx.strokeStyle = '#4a5568';
+          ctx.lineWidth = 8;
+          ctx.strokeRect(0, 0, canvasW, canvasH);
+        } else if (frameStyle === 'heart') {
+          canvasW = size + 80;
+          canvasH = size + 100;
+          qrX = 40;
+          qrY = 60;
+
+          // Background
+          ctx.fillStyle = '#fdf2f8';
+          ctx.fillRect(0, 0, canvasW, canvasH);
+
+          // Border
+          ctx.strokeStyle = '#ec4899';
+          ctx.lineWidth = 6;
+          ctx.strokeRect(10, 10, canvasW - 20, canvasH - 20);
+
+          // Emojis
+          ctx.font = '24px Arial';
+          ctx.fillText('💖', 25, 40);
+          ctx.fillText('💝', canvasW - 55, canvasH - 25);
+        } else if (frameStyle === 'phone') {
+          canvasW = size + 40;
+          canvasH = size + 110;
+          qrX = 20;
+          qrY = 65;
+
+          // Phone Background screen
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, canvasW, canvasH);
+
+          // Phone Border
+          ctx.strokeStyle = '#2d3748';
+          ctx.lineWidth = 14;
+          ctx.strokeRect(7, 7, canvasW - 14, canvasH - 14);
+
+          // Speaker Notch
+          ctx.fillStyle = '#2d3748';
+          ctx.fillRect(canvasW / 2 - 25, 20, 50, 8);
+        } else if (frameStyle === 'speech') {
+          canvasW = size + 60;
+          canvasH = size + 110;
+          qrX = 30;
+          qrY = 60;
+
+          // Bubble bg
+          ctx.fillStyle = '#f5f3ff';
+          ctx.fillRect(0, 0, canvasW, canvasH - 20);
+
+          // Bubble border
+          ctx.strokeStyle = '#8b5cf6';
+          ctx.lineWidth = 6;
+          ctx.strokeRect(3, 3, canvasW - 6, canvasH - 26);
+
+          // SCAN ME! Text
+          ctx.fillStyle = '#8b5cf6';
+          ctx.font = 'bold 16px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('SCAN ME!', canvasW / 2, 40);
+
+          // Triangle pointer
+          ctx.beginPath();
+          ctx.moveTo(canvasW / 2 - 15, canvasH - 23);
+          ctx.lineTo(canvasW / 2, canvasH - 3);
+          ctx.lineTo(canvasW / 2 + 15, canvasH - 23);
+          ctx.closePath();
+          ctx.fillStyle = '#f5f3ff';
+          ctx.fill();
+          ctx.strokeStyle = '#8b5cf6';
+          ctx.stroke();
+        }
+
+        ctx.drawImage(qrImg, qrX, qrY, size, size);
+
+        // Download PNG
+        const blobUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `qr-code-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
     } catch (e) {
       console.error('Download failed', e);
+    }
+  };
+
+  const renderQrPreview = () => {
+    if (!qrUrl) return null;
+
+    const qrImageElement = (
+      <img
+        src={qrUrl}
+        alt="QR Code"
+        onLoad={() => setLoading(false)}
+        style={{ display: 'block', maxWidth: '100%', height: 'auto', backgroundColor: bgColor }}
+      />
+    );
+
+    switch (frameStyle) {
+      case 'retro':
+        return (
+          <div style={{
+            border: '4px solid #4a5568',
+            borderRadius: '8px',
+            background: '#1a202c',
+            padding: '2.5rem 1rem 1rem 1rem',
+            position: 'relative',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+            maxWidth: '100%',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '24px',
+              background: '#4a5568',
+              color: '#fff',
+              fontSize: '0.75rem',
+              fontFamily: 'monospace',
+              display: 'flex',
+              alignItems: 'center',
+              paddingLeft: '0.5rem',
+              borderTopLeftRadius: '4px',
+              borderTopRightRadius: '4px',
+            }}>
+              system_qr.exe
+            </div>
+            {qrImageElement}
+          </div>
+        );
+      case 'heart':
+        return (
+          <div style={{
+            border: '4px dashed #ec4899',
+            borderRadius: '24px',
+            background: '#fdf2f8',
+            padding: '2.5rem 2rem 2rem 2rem',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <span style={{ position: 'absolute', top: '8px', left: '12px', fontSize: '1.25rem' }}>💖</span>
+            <span style={{ position: 'absolute', bottom: '8px', right: '12px', fontSize: '1.25rem' }}>💝</span>
+            {qrImageElement}
+          </div>
+        );
+      case 'phone':
+        return (
+          <div style={{
+            border: '10px solid #2d3748',
+            borderRadius: '24px',
+            background: '#000',
+            padding: '2.5rem 1rem 1.5rem 1rem',
+            position: 'relative',
+            boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '50px',
+              height: '8px',
+              background: '#2d3748',
+              borderRadius: '4px'
+            }} />
+            {qrImageElement}
+          </div>
+        );
+      case 'speech':
+        return (
+          <div style={{
+            border: '3px solid #8b5cf6',
+            borderRadius: '16px',
+            background: '#f5f3ff',
+            padding: '2rem 1.5rem 1.5rem 1.5rem',
+            position: 'relative',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#8b5cf6', fontFamily: 'sans-serif', letterSpacing: '1px' }}>SCAN ME!</span>
+            {qrImageElement}
+            <div style={{
+              position: 'absolute',
+              bottom: '-10px',
+              left: '50%',
+              transform: 'translateX(-50%) rotate(45deg)',
+              width: '18px',
+              height: '18px',
+              background: '#f5f3ff',
+              borderRight: '3px solid #8b5cf6',
+              borderBottom: '3px solid #8b5cf6',
+            }} />
+          </div>
+        );
+      default:
+        return (
+          <div style={{
+            padding: '1rem',
+            background: 'white',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}>
+            {qrImageElement}
+          </div>
+        );
     }
   };
 
   return (
     <div className="tool-workspace-layout">
       <div className="glass-panel tool-controls-panel">
-        <div className="tool-inputs-grid tool-inputs-grid-2">
-          <div className="form-group">
-            <label className="form-label">
-              <QrCode size={16} /> QR Data (URL or Text)
-            </label>
-            <input
-              type="text"
-              className="form-input-text"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              placeholder="https://example.com"
-            />
-          </div>
+        <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+          <label className="form-label">
+            <QrCode size={16} /> QR Data (URL or Text)
+          </label>
+          <input
+            type="text"
+            className="form-input-text"
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+            placeholder="https://example.com"
+          />
+        </div>
 
+        <div className="tool-inputs-grid tool-inputs-grid-2">
           <div className="form-group">
             <label className="form-label">QR Size ({size}px)</label>
             <input
@@ -139,9 +410,25 @@ export function QrGenerator() {
               style={{ accentColor: 'var(--accent-primary)', cursor: 'pointer', marginTop: '0.5rem' }}
             />
           </div>
+
+          <div className="form-group">
+            <label className="form-label">QR Frame Design</label>
+            <select
+              className="form-input-text"
+              value={frameStyle}
+              onChange={(e) => setFrameStyle(e.target.value as any)}
+              style={{ padding: '0.4rem 0.6rem', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              <option value="none">Square (Default)</option>
+              <option value="retro">Retro Computer</option>
+              <option value="heart">Love Heart</option>
+              <option value="phone">Smartphone Notch</option>
+              <option value="speech">Speech Bubble</option>
+            </select>
+          </div>
         </div>
 
-        <div className="tool-inputs-grid tool-inputs-grid-2" style={{ marginTop: '0.5rem' }}>
+        <div className="tool-inputs-grid tool-inputs-grid-2" style={{ marginTop: '1rem' }}>
           <div className="form-group">
             <label className="form-label">Foreground Color</label>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -186,24 +473,8 @@ export function QrGenerator() {
         <span className="output-title" style={{ alignSelf: 'flex-start' }}>Preview</span>
         
         {qrUrl ? (
-          <div
-            style={{
-              padding: '1rem',
-              background: 'white',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: 'var(--shadow-md)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
-          >
-            <img
-              src={qrUrl}
-              alt="QR Code"
-              onLoad={() => setLoading(false)}
-              style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
-            />
+          <div style={{ position: 'relative' }}>
+            {renderQrPreview()}
             {loading && (
               <div
                 style={{
@@ -222,7 +493,7 @@ export function QrGenerator() {
             )}
           </div>
         ) : (
-          <span style={{ color: 'var(--text-muted)' }}>Enter data to generate QR code</span>
+          <div style={{ color: 'var(--text-muted)' }}>Enter QR data to generate preview</div>
         )}
 
         {qrUrl && (

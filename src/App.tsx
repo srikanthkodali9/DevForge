@@ -234,6 +234,31 @@ export default function App() {
       icon: Terminal,
       component: CronGenerator,
     },
+    // DESIGN TOOLS
+    {
+      id: 'qr-generator',
+      name: 'QR Code Generator',
+      description: 'Create customizable QR codes with custom colors and download them as PNG.',
+      category: 'design',
+      icon: Palette,
+      component: QrGenerator,
+    },
+    {
+      id: 'color-converter',
+      name: 'Color Converter & Harmony',
+      description: 'Convert HEX, RGB, HSL values and build matching harmonic color palettes.',
+      category: 'design',
+      icon: Palette,
+      component: ColorConverter,
+    },
+    {
+      id: 'palette-generator',
+      name: 'Color Palette Generator',
+      description: 'Generate harmonious 5-color palettes, lock favorite colors, and preview last 10 generations with link sharing.',
+      category: 'design',
+      icon: Palette,
+      component: PaletteGenerator,
+    },
     // CONVERTERS
     {
       id: 'base64-codec',
@@ -309,31 +334,7 @@ export default function App() {
       icon: Type,
       component: CaseWordCounter,
     },
-    // DESIGN TOOLS
-    {
-      id: 'qr-generator',
-      name: 'QR Code Generator',
-      description: 'Create customizable QR codes with custom colors and download them as PNG.',
-      category: 'design',
-      icon: Palette,
-      component: QrGenerator,
-    },
-    {
-      id: 'color-converter',
-      name: 'Color Converter & Harmony',
-      description: 'Convert HEX, RGB, HSL values and build matching harmonic color palettes.',
-      category: 'design',
-      icon: Palette,
-      component: ColorConverter,
-    },
-    {
-      id: 'palette-generator',
-      name: 'Color Palette Generator',
-      description: 'Generate harmonious 5-color palettes, lock favorite colors, and preview last 10 generations with link sharing.',
-      category: 'design',
-      icon: Palette,
-      component: PaletteGenerator,
-    },
+
   ];
 
   // Load favorites & theme on mount
@@ -398,10 +399,10 @@ export default function App() {
     { id: 'cicd', name: 'CI/CD Pipelines', icon: Play },
     { id: 'devops', name: 'DevOps & Containers', icon: Settings },
     { id: 'webdev', name: 'Web & Development', icon: Terminal },
+    { id: 'design', name: 'Design Tools', icon: Palette },
     { id: 'converters', name: 'Converters', icon: RefreshCw },
     { id: 'crypto', name: 'Crypto & Hashes', icon: Key },
     { id: 'text', name: 'Text Utilities', icon: Type },
-    { id: 'design', name: 'Design Tools', icon: Palette },
   ];
 
   const currentTool = tools.find((t) => t.id === activeToolId);
