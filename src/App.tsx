@@ -27,6 +27,7 @@ import { Base64Codec, UrlCodec, JsonYamlConverter } from './components/tools/Con
 import { JwtDecoder, JsonFormatter, RegexTester, CronGenerator } from './components/tools/WebDevTools';
 import { DiffChecker, MarkdownPreview, CaseWordCounter } from './components/tools/TextTools';
 import { QrGenerator, ColorConverter } from './components/tools/DesignTools';
+import { PaletteGenerator } from './components/tools/PaletteGenerator';
 import { K8sGenerator, K8sEnvConverter, K8sCommandBuilder, K8sResourceConverter, K8sKubeconfigMerger } from './components/tools/K8sTools';
 import { PromptBuilder, JsonSchemaGenerator, ImagePromptGenerator } from './components/tools/AITools';
 import { McpToolBuilder } from './components/tools/McpTools';
@@ -325,6 +326,14 @@ export default function App() {
       icon: Palette,
       component: ColorConverter,
     },
+    {
+      id: 'palette-generator',
+      name: 'Color Palette Generator',
+      description: 'Generate harmonious 5-color palettes, lock favorite colors, and preview last 10 generations with link sharing.',
+      category: 'design',
+      icon: Palette,
+      component: PaletteGenerator,
+    },
   ];
 
   // Load favorites & theme on mount
@@ -338,6 +347,11 @@ export default function App() {
       document.documentElement.setAttribute('data-theme', savedTheme);
     } else {
       document.documentElement.setAttribute('data-theme', 'dark');
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('palette')) {
+      setActiveToolId('palette-generator');
     }
   }, []);
 
