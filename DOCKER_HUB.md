@@ -51,7 +51,7 @@ docker-compose up -d
 
 ## 🛠️ Tool Suite Highlights
 
-*   **🤖 AI Engineering**: LLM structured JSON schema generator, system role prompt template builder, and narrative prompt generator for ComfyUI Nanobanana/Stable Diffusion.
+*   **🤖 AI Engineering**: LLM structured JSON schema generator, system role prompt template builder with pre-configured presets (Devops Expert, System Architect, Software Developer expert, Tech Writer, General Specialist), and narrative prompt generator for ComfyUI Nanobanana/Stable Diffusion.
 *   **⛵ Kubernetes**: Deployment/Service YAML manifest builder, kubectl command generator, kubeconfig merger, resource unit converter, and `.env` parser.
 *   **⚙️ CI/CD Pipelines**: GitHub Actions workflow builder, GitLab CI/CD pipeline generator, Groovy Jenkinsfile pipeline builder, and ArgoCD application/workflows manifest generators.
 *   **🐳 DevOps & Containers**: `docker run` to `docker-compose` converter, multi-stage Dockerfile generator, CIDR subnet calculator (with binary tree visualizer), Splunk query generator, and Prometheus alert rules builder.

@@ -46,7 +46,7 @@
 *   **Markdown Previewer**: Live Markdown viewer.
 
 ### 🤖 AI Engineering
-*   **AI Prompt Template Builder**: Build structural role-play, chain-of-thought, and refactoring prompts.
+*   **AI Prompt Template Builder**: Design and customize structured system prompts (with preconfigured presets for Devops Experts, System Architects, Software Developers, Tech Writers, and General Specialists), few-shot examples, refactoring objectives, and chain-of-thought logic.
 *   **JSON Schema Generator**: Design structural output schemas for LLM responses.
 *   **AI Image Prompt Generator**: Generate high-fidelity, detailed image prompts optimized for ComfyUI Nanobanana (Gemini) or Stable Diffusion.
 
