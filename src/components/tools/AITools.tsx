@@ -14,16 +14,67 @@ function useCopy() {
 // ----------------------------------------------------
 // 1. PROMPT TEMPLATE BUILDER
 // ----------------------------------------------------
+const ROLE_PRESETS = {
+  custom: {
+    role: 'Senior Security Architect',
+    task: 'Audit this code for vulnerabilities.',
+    constraints: 'Provide references to OWASP Top 10. Do not write code in responses.',
+    format: 'Markdown Table'
+  },
+  devops: {
+    role: 'Devops Expert',
+    task: 'Configure, optimize, or troubleshoot DevOps pipelines, Dockerfiles, or Kubernetes resources.',
+    constraints: 'Ensure multi-stage builds, rootless container security, minimal image footprint, and clean logging.',
+    format: 'YAML / Configuration guidelines and detailed walkthrough'
+  },
+  architect: {
+    role: 'System Architect',
+    task: 'Design a highly resilient, globally distributed, and scalable software architecture.',
+    constraints: 'Specify caching layers, message queues, storage layout, data replication policies, and high-availability design.',
+    format: 'Structured System Architecture Specification'
+  },
+  developer: {
+    role: 'Software Developer expert',
+    task: 'Implement clean, efficient, and maintainable code block solving this problem.',
+    constraints: 'Apply appropriate design patterns, ensure optimal time complexity, write basic unit test suggestions, and handle boundary conditions.',
+    format: 'Fully functional code block with documentation'
+  },
+  writer: {
+    role: 'Tech Writer',
+    task: 'Write comprehensive, developer-friendly documentation for this codebase or feature.',
+    constraints: 'Use clear headings, provide complete usage examples, write in active voice, and follow standard markdown conventions.',
+    format: 'Technical Markdown Documentation'
+  },
+  general: {
+    role: 'General Specialist',
+    task: 'Analyze the given request or problem and provide a detailed, accurate response.',
+    constraints: 'Ensure clear structure, fact-based logical deductions, and concise actionable steps.',
+    format: 'Structured markdown explanation'
+  }
+};
+
 export function PromptBuilder() {
   const [activeTemplate, setActiveTemplate] = useState<'system' | 'fewshot' | 'refactor' | 'cot'>('system');
   const [promptOutput, setPromptOutput] = useState('');
   const { copied, copy } = useCopy();
 
   // System State
-  const [sysRole, setSysRole] = useState('Senior Security Architect');
-  const [sysTask, setSysTask] = useState('Audit this code for vulnerabilities.');
-  const [sysConstraints, setSysConstraints] = useState('Provide references to OWASP Top 10. Do not write code in responses.');
-  const [sysFormat, setSysFormat] = useState('Markdown Table');
+  const [selectedPreset, setSelectedPreset] = useState<string>('custom');
+  const [sysRole, setSysRole] = useState(ROLE_PRESETS.custom.role);
+  const [sysTask, setSysTask] = useState(ROLE_PRESETS.custom.task);
+  const [sysConstraints, setSysConstraints] = useState(ROLE_PRESETS.custom.constraints);
+  const [sysFormat, setSysFormat] = useState(ROLE_PRESETS.custom.format);
+
+  const handlePresetChange = (presetKey: string) => {
+    setSelectedPreset(presetKey);
+    const preset = ROLE_PRESETS[presetKey as keyof typeof ROLE_PRESETS];
+    if (preset) {
+      setSysRole(preset.role);
+      setSysTask(preset.task);
+      setSysConstraints(preset.constraints);
+      setSysFormat(preset.format);
+    }
+  };
 
   // Few Shot State
   const [fewTask, setFewTask] = useState('Convert SQL statements to MongoDB queries.');
@@ -122,21 +173,69 @@ Guidelines:
         {/* 1. SYSTEM */}
         {activeTemplate === 'system' && (
           <div className="tool-inputs-grid tool-inputs-grid-2">
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Role Preset</label>
+              <select
+                className="form-input-select"
+                value={selectedPreset}
+                onChange={(e) => handlePresetChange(e.target.value)}
+                style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+              >
+                <option value="custom">✍️ Custom Role</option>
+                <option value="devops">🛠️ Devops Expert</option>
+                <option value="architect">🏛️ System Architect</option>
+                <option value="developer">💻 Software Developer expert</option>
+                <option value="writer">📝 Tech Writer</option>
+                <option value="general">🧠 General Specialist</option>
+              </select>
+            </div>
             <div className="form-group">
               <label className="form-label">System Role / Persona</label>
-              <input type="text" className="form-input-text" value={sysRole} onChange={(e) => setSysRole(e.target.value)} />
+              <input
+                type="text"
+                className="form-input-text"
+                value={sysRole}
+                onChange={(e) => {
+                  setSysRole(e.target.value);
+                  setSelectedPreset('custom');
+                }}
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Goal / Task</label>
-              <input type="text" className="form-input-text" value={sysTask} onChange={(e) => setSysTask(e.target.value)} />
+              <input
+                type="text"
+                className="form-input-text"
+                value={sysTask}
+                onChange={(e) => {
+                  setSysTask(e.target.value);
+                  setSelectedPreset('custom');
+                }}
+              />
             </div>
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label className="form-label">Format Preference</label>
-              <input type="text" className="form-input-text" value={sysFormat} onChange={(e) => setSysFormat(e.target.value)} />
+              <input
+                type="text"
+                className="form-input-text"
+                value={sysFormat}
+                onChange={(e) => {
+                  setSysFormat(e.target.value);
+                  setSelectedPreset('custom');
+                }}
+              />
             </div>
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label className="form-label">Constraints</label>
-              <textarea className="form-input-textarea" value={sysConstraints} onChange={(e) => setSysConstraints(e.target.value)} style={{ minHeight: '100px' }} />
+              <textarea
+                className="form-input-textarea"
+                value={sysConstraints}
+                onChange={(e) => {
+                  setSysConstraints(e.target.value);
+                  setSelectedPreset('custom');
+                }}
+                style={{ minHeight: '100px' }}
+              />
             </div>
           </div>
         )}
